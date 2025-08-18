@@ -226,7 +226,7 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # 复制后端jar包
 COPY backend/target/*.jar app.jar
 
-# 复制前端构建产物
+# 复制前端构建产物到静态目录，供nginx使用
 COPY frontend/dist ./static
 
 # 创建必要目录
@@ -327,6 +327,8 @@ services:
     volumes:
       - app_uploads:/app/uploads
       - app_logs:/app/logs
+      # 共享前端文件给nginx
+      - frontend_dist:/app/static
     depends_on:
       mysql:
         condition: service_healthy
@@ -347,6 +349,8 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - nginx_logs:/var/log/nginx
+      # 挂载前端构建文件到nginx
+      - frontend_dist:/usr/share/nginx/html:ro
     depends_on:
       - app
     networks:
@@ -367,6 +371,8 @@ volumes:
   app_logs:
     driver: local
   nginx_logs:
+    driver: local
+  frontend_dist:
     driver: local
 
 networks:
