@@ -43,28 +43,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # kkFileView 文件预览服务
-  kkfileview:
-    build:
-      context: ./kkFileView
-      dockerfile: Dockerfile
-    container_name: doc-center-kkfileview
-    restart: unless-stopped
-    ports:
-      - "${KKFILEVIEW_PORT:-8012}:8012"
-    environment:
-      - KK_BASE_URL=http://kkfileview:8012
-      - file.dir=/opt/kkFileView/file
-    volumes:
-      - kkfileview_files:/opt/kkFileView/file
-      - ./kkFileView/config:/opt/kkFileView/config
-    networks:
-      - doc-center-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8012"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # 主应用服务
   app:
@@ -86,7 +64,6 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SA_TOKEN_JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - KKFILEVIEW_BASE_URL=http://kkfileview:8012
     volumes:
       - app_uploads:/app/uploads
       - app_logs:/app/logs
@@ -95,8 +72,6 @@ services:
       mysql:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      kkfileview:
         condition: service_healthy
     networks:
       - doc-center-network
@@ -137,8 +112,6 @@ volumes:
   app_uploads:
     driver: local
   app_logs:
-    driver: local
-  kkfileview_files:
     driver: local
   nginx_logs:
     driver: local
