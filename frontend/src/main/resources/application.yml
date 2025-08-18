@@ -1,0 +1,179 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: springboot-backend
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
+
+  # 数据源配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/document_center_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectionCollation=utf8mb4_unicode_ci
+    username: root
+    password: phj063130
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 连接池配置
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+  
+
+
+  # MyBatis-Plus配置
+  mybatis-plus:
+    configuration:
+      map-underscore-to-camel-case: true
+      log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    global-config:
+      db-config:
+        id-type: auto
+        logic-delete-field: deleted
+        logic-delete-value: 1
+        logic-not-delete-value: 0
+    mapper-locations: classpath*:/mapper/**/*.xml
+    type-aliases-package: com.example.entity
+  
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      database: 0
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+# 日志配置
+logging:
+  level:
+    org.springframework.web.servlet.mvc.method.annotation.AbstractMessageConverterMethodProcessor: ERROR
+    org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver: ERROR
+
+# Sa-Token配置
+sa-token:
+  # token 名称（同时也是 cookie 名称）
+  token-name: Authorization
+  # token 有效期（单位：秒） 默认30天，-1 代表永久有效
+  timeout: 2592000
+  # token 最低活跃频率（单位：秒），如果 token 超过此时间没有访问系统就会被冻结，默认-1 代表不限制，永不冻结
+  active-timeout: -1
+  # 是否允许同一账号多地同时登录 （为 true 时允许一起登录, 为 false 时新登录挤掉旧登录）
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个 token （为 true 时所有登录共用一个 token, 为 false 时每次登录新建一个 token）
+  is-share: false
+  # 同一账号最大登录数量，-1代表不限制
+  max-login-count: -1
+  # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: true
+  # 是否从 cookie 中读取 token
+  is-read-cookie: false
+  # 是否从 header 中读取 token
+  is-read-header: true
+  # token前缀
+  token-prefix: Bearer
+  # jwt秘钥
+  jwt-secret-key: abcdefghijklmnopqrstuvwxyz
+
+# 文件存储配置
+file:
+  storage:
+    upload-dir: uploads
+    max-file-size: 104857600  # 100MB
+    max-request-size: 104857600  # 100MB
+    allowed-types:
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - md
+      - html
+      - htm
+      - xml
+      - json
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - bmp
+      - webp
+      - mp4
+      - avi
+      - mov
+      - wmv
+      - flv
+      - mkv
+      - mp3
+      - wav
+      - flac
+      - aac
+      - ogg
+      - zip
+      - rar
+      - 7z
+    file-name-strategy: uuid
+    keep-original-name: false
+    storage-strategy: local
+    date-folder: true
+  preview:
+    # 内置预览服务配置
+    pdf-dpi: 150  # PDF转图片的DPI
+    image-thumbnail-size: 200  # 缩略图大小
+    text-max-lines: 1000  # 文本预览最大行数
+    supported-types:
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - md
+      - html
+      - htm
+      - xml
+      - json
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - bmp
+      - webp
+      - mp4
+      - avi
+      - mov
+      - wmv
+      - flv
+      - mkv
+      - mp3
+      - wav
+      - flac
+      - aac
+      - ogg
+
+# Knife4j配置
+knife4j:
+  enable: true
+  openapi:
+    title: Vue3 + SpringBoot API文档
+    description: 基于Sa-Token的权限管理系统
+    version: 1.0.0
+    concat: developer@example.com
