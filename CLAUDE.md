@@ -41,14 +41,6 @@ mvn spring-boot:run       # 开发服务器 (localhost:8080)
 mvn clean package         # 生产构建
 ```
 
-### kkFileView 预览服务
-```bash
-cd kkFileView/server
-# Windows
-startup.bat
-# Linux/Mac  
-./bin/startup.sh
-```
 
 ## 核心技术栈
 
@@ -75,7 +67,7 @@ startup.bat
 - 前端开发服务器: `http://localhost:3000`
 - 后端 API 服务: `http://localhost:8080`  
 - API 文档: `http://localhost:8080/doc.html`
-- kkFileView 预览: `http://localhost:8012`
+- 文件预览接口: `http://localhost:8080/api/preview` (集成在主应用中)
 - MySQL: `localhost:3306`
 - Redis: `localhost:6379`
 
@@ -92,10 +84,10 @@ startup.bat
 - **FileCategoryService**: 文件分类管理（树形结构）
 - **FileConvertService**: 文件格式转换
 
-### 文件预览
+### 文件预览 (`backend/src/main/java/com/example/controller/PreviewController.java`)
 - 内置预览引擎: PDF、Office、图片、文本等
-- 集成 kkFileView: 支持更多文档格式
-- 预览策略可配置切换
+- 支持在线预览，无需下载文件
+- 可配置预览参数和支持的文件类型
 
 ## 数据库设计
 - **sys_user**: 用户和角色信息
@@ -113,56 +105,37 @@ startup.bat
 - **user/user123**: 普通用户账户
 - **demo/demo123**: 演示账户
 
-## Docker 部署
+## 部署指南
 
-### Linux/Mac 部署
+**完整部署说明请参考**: [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
+
+### 快速部署命令
 ```bash
-# 配置环境变量
-cp .env.example .env.prod
-vim .env.prod
+# 1. 克隆项目并配置环境
+git clone <repo-url> && cd doc-center
+cp .env.example .env.prod && nano .env.prod
 
-# 一键部署
-./deploy.sh
+# 2. 一键部署（Linux/Mac）
+chmod +x deploy.sh && ./deploy.sh --backup
 
-# 带备份部署
-./deploy.sh --backup
-```
-
-### Windows 部署
-```batch
-# 批处理脚本部署
-copy .env.example .env.prod
-notepad .env.prod
+# Windows 用户
 deploy.bat
 
-# PowerShell 脚本部署
-Copy-Item .env.example .env.prod
-notepad .env.prod
-.\deploy.ps1 -Backup
-```
-
-### 开发环境快速启动（Windows）
-```batch
-# 一键启动开发环境
-start-dev.bat
-
-# 数据库初始化
-setup-database.bat
-
-# 编译测试
-test-compile.bat
-```
-
-### Docker Compose 命令
-```bash
-# 启动生产环境
-docker-compose -f docker-compose.prod.yml up -d
-
-# 查看服务状态
+# 3. 验证部署
 docker-compose -f docker-compose.prod.yml ps
+curl http://localhost/health
+```
 
-# 查看应用日志
-docker-compose -f docker-compose.prod.yml logs -f app
+### 开发环境启动
+```bash
+# 启动依赖服务
+docker-compose up -d mysql redis
+
+# 后端开发
+cd backend && mvn spring-boot:run
+
+# 前端开发  
+cd frontend && npm run dev
 ```
 
 ## 常用开发命令

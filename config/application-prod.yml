@@ -149,7 +149,6 @@ file:
     pdf-dpi: 150
     image-thumbnail-size: 200
     text-max-lines: 1000
-    kkfileview-base-url: ${KKFILEVIEW_BASE_URL}
     supported-types:
       - pdf
       - doc
