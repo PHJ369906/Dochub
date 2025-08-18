@@ -162,8 +162,51 @@ public class FileStorageService {
      * 获取相对路径
      */
     private String getRelativePath(Path absolutePath) {
-        Path uploadPath = Paths.get(storageConfig.getUploadDir());
-        return uploadPath.relativize(absolutePath).toString().replace("\\", "/");
+        try {
+            Path uploadPath = Paths.get(storageConfig.getUploadDir()).toAbsolutePath().normalize();
+            Path normalizedAbsolutePath = absolutePath.toAbsolutePath().normalize();
+            
+            // 确保两个路径都是同一文件系统类型，避免Path类型转换异常
+            if (!normalizedAbsolutePath.getFileSystem().equals(uploadPath.getFileSystem())) {
+                // 如果文件系统不同，使用字符串操作来获取相对路径
+                String uploadStr = uploadPath.toString();
+                String absoluteStr = normalizedAbsolutePath.toString();
+                if (absoluteStr.startsWith(uploadStr)) {
+                    return absoluteStr.substring(uploadStr.length() + 1).replace("\\", "/");
+                }
+                throw new RuntimeException("无法计算相对路径：文件不在上传目录内");
+            }
+            
+            return uploadPath.relativize(normalizedAbsolutePath).toString().replace("\\", "/");
+        } catch (Exception e) {
+            log.error("计算相对路径失败: {}, 绝对路径: {}", e.getMessage(), absolutePath);
+            // 如果relativize失败，使用备用方法
+            return getRelativePathFallback(absolutePath);
+        }
+    }
+    
+    /**
+     * 获取相对路径的备用方法
+     */
+    private String getRelativePathFallback(Path absolutePath) {
+        try {
+            String uploadDir = Paths.get(storageConfig.getUploadDir()).toAbsolutePath().normalize().toString();
+            String absoluteStr = absolutePath.toAbsolutePath().normalize().toString();
+            
+            if (absoluteStr.startsWith(uploadDir)) {
+                String relativePath = absoluteStr.substring(uploadDir.length());
+                // 移除开头的分隔符
+                if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+                    relativePath = relativePath.substring(1);
+                }
+                return relativePath.replace("\\", "/");
+            }
+            
+            throw new RuntimeException("文件不在上传目录内");
+        } catch (Exception e) {
+            log.error("备用相对路径计算也失败: {}", e.getMessage());
+            throw new RuntimeException("无法计算文件相对路径");
+        }
     }
     
     /**

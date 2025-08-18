@@ -61,9 +61,23 @@ public class PolicyFileService {
             PolicyFile policyFile = new PolicyFile();
             // 只设置基本必需字段
             policyFile.setTitle(title != null ? title : file.getOriginalFilename());
-            policyFile.setFilePath(filePath);
             policyFile.setOriginalName(file.getOriginalFilename());
+            
+            // 确保存储文件名不为null
+            String storedFileName = java.nio.file.Paths.get(filePath).getFileName().toString();
+            policyFile.setFileName(storedFileName != null ? storedFileName : file.getOriginalFilename());
+            
+            policyFile.setFilePath(filePath);
             policyFile.setFileSize(file.getSize());
+            
+            // 确保文件类型不为null
+            String fileType = storageService.getFileExtension(file.getOriginalFilename());
+            policyFile.setFileType(fileType != null && !fileType.isEmpty() ? fileType : "unknown");
+            
+            // 确保MIME类型不为null
+            String mimeType = file.getContentType();
+            policyFile.setMimeType(mimeType != null ? mimeType : "application/octet-stream");
+            
             policyFile.setCreatedBy(StpUtil.getLoginIdAsLong());
             policyFile.setEnabled(true);
             policyFile.setIsPublic(true);
