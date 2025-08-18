@@ -46,11 +46,7 @@ services:
 
   # 主应用服务
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - API_BASE_URL=${API_BASE_URL}
+    image: doc-center-app
     container_name: doc-center-app
     restart: unless-stopped
     ports:
