@@ -11,9 +11,9 @@ SET FOREIGN_KEY_CHECKS = 0;
 SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO';
 
 -- 创建数据库
-CREATE DATABASE IF NOT EXISTS document_center_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS dochub_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE document_center_db;
+USE dochub_db;
 
 -- 开始事务
 START TRANSACTION;
@@ -453,11 +453,11 @@ ANALYZE TABLE policy_file_tag;
 
 -- 创建只读用户（用于报表查询等）
 -- CREATE USER 'readonly'@'%' IDENTIFIED BY 'readonly_password';
--- GRANT SELECT ON document_center_db.* TO 'readonly'@'%';
+-- GRANT SELECT ON dochub_db.* TO 'readonly'@'%';
 
 -- 创建应用用户（用于应用程序连接）
 -- CREATE USER 'app_user'@'%' IDENTIFIED BY 'app_password';
--- GRANT SELECT, INSERT, UPDATE, DELETE ON document_center_db.* TO 'app_user'@'%';
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON dochub_db.* TO 'app_user'@'%';
 
 -- 刷新权限
 -- FLUSH PRIVILEGES;
