@@ -1,6 +1,6 @@
 # 多阶段构建 Dockerfile
 # 第一阶段：构建前端
-FROM node:18-alpine AS frontend-builder
+FROM registry.cn-hangzhou.aliyuncs.com/library/node:18-alpine AS frontend-builder
 
 # 设置镜像源以加快下载速度
 RUN npm config set registry https://registry.npmmirror.com/
@@ -24,7 +24,7 @@ ENV VITE_API_BASE_URL=${API_BASE_URL}
 RUN npm run build
 
 # 第二阶段：构建后端
-FROM maven:3.9-openjdk-17 AS backend-builder
+FROM registry.cn-hangzhou.aliyuncs.com/library/maven:3.9-openjdk-17 AS backend-builder
 
 # 设置Maven镜像源
 RUN mkdir -p /root/.m2 && \
@@ -45,7 +45,7 @@ COPY backend/src ./src
 RUN mvn clean package -DskipTests -B
 
 # 第三阶段：运行时镜像
-FROM openjdk:17-jre-slim
+FROM registry.cn-hangzhou.aliyuncs.com/library/openjdk:17-jre-slim
 
 # 安装必要的工具和字体
 RUN apt-get update && apt-get install -y \
