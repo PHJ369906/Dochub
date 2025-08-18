@@ -25,7 +25,7 @@ public class FileCategoryService {
      * 获取所有分类（树形结构）
      */
     public List<FileCategory> getAllCategories() {
-        return categoryMapper.findCategoryTree();
+        return categoryMapper.findCategoryTreeWithFileCount();
     }
     
     /**

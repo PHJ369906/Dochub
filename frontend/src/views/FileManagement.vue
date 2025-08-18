@@ -412,7 +412,8 @@ const buildCategoryTree = (categories: FileCategory[]): FileCategory[] => {
   categories.forEach(category => {
     categoryMap.set(category.id, {
       ...category,
-      children: []
+      children: [],
+      fileCount: category.fileCount || 0
     })
   })
   

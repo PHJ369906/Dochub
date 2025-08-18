@@ -26,6 +26,20 @@ public interface PolicyFileMapper extends BaseMapper<PolicyFile> {
     IPage<PolicyFile> findByCategoryIdAndEnabledTrue(Page<PolicyFile> page, @Param("categoryId") Long categoryId);
 
     /**
+     * 根据分类ID列表查找文件（支持包含子分类）
+     */
+    @Select("<script>" +
+            "SELECT * FROM policy_file WHERE is_enabled = 1" +
+            "<if test='categoryIds != null and categoryIds.size() > 0'>" +
+            " AND category_id IN " +
+            "<foreach collection='categoryIds' item='id' open='(' separator=',' close=')'>" +
+            "#{id}" +
+            "</foreach>" +
+            "</if>" +
+            "</script>")
+    IPage<PolicyFile> findByCategoryIdsAndEnabledTrue(Page<PolicyFile> page, @Param("categoryIds") List<Long> categoryIds);
+
+    /**
      * 根据标题搜索文件
      */
     @Select("SELECT * FROM policy_file WHERE title LIKE CONCAT('%', #{title}, '%') AND is_enabled = 1")

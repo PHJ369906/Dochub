@@ -81,9 +81,47 @@ public class PreviewController {
             @PathVariable int pageIndex,
             @RequestParam(value = "dpi", defaultValue = "150") int dpi) {
         
-        return ResponseEntity.ok()
-            .contentType(MediaType.TEXT_HTML)
-            .body("<html><body><h3>PDF预览功能正在开发中...</h3></body></html>");
+        try {
+            PolicyFile file = fileService.getFileById(id);
+            if (file == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // 使用PDF.js进行预览
+            String pdfViewerHtml = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>PDF预览 - %s</title>
+                    <style>
+                        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                        .pdf-container { width: 100%%; height: 100vh; }
+                        iframe { width: 100%%; height: 100%%; border: none; }
+                        .error { padding: 20px; text-align: center; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="pdf-container">
+                        <iframe src="/api/files/%d/download#toolbar=1&navpanes=1&scrollbar=1"
+                                type="application/pdf"
+                                title="PDF预览">
+                        </iframe>
+                    </div>
+                </body>
+                </html>
+                """.formatted(file.getTitle(), file.getId());
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_HTML)
+                .body(pdfViewerHtml);
+                
+        } catch (Exception e) {
+            log.error("PDF预览失败: {}", e.getMessage());
+            return ResponseEntity.status(500)
+                .contentType(MediaType.TEXT_HTML)
+                .body("<html><body><div class='error'><h3>PDF预览失败: " + e.getMessage() + "</h3></div></body></html>");
+        }
     }
 
     /**
@@ -92,9 +130,68 @@ public class PreviewController {
     @Operation(summary = "获取Office文档预览")
     @GetMapping("/office/{id}")
     public ResponseEntity<String> getOfficePreview(@PathVariable Long id) {
-        return ResponseEntity.ok()
-            .contentType(MediaType.TEXT_HTML)
-            .body("<html><body><h3>Office文档预览功能正在开发中...</h3></body></html>");
+        try {
+            PolicyFile file = fileService.getFileById(id);
+            if (file == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String fileType = file.getFileType().toLowerCase();
+            String downloadUrl = "/api/files/" + id + "/download";
+            
+            // 简单的预览页面
+            String officeViewerHtml = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>文档预览 - %s</title>
+                    <style>
+                        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #f5f5f5; }
+                        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                        .file-info { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+                        .file-title { font-size: 24px; color: #333; margin-bottom: 10px; }
+                        .file-details { color: #666; font-size: 14px; }
+                        .preview-message { text-align: center; padding: 40px; color: #666; }
+                        .download-btn { 
+                            display: inline-block; background: #007bff; color: white; padding: 12px 24px; 
+                            text-decoration: none; border-radius: 4px; margin: 10px 5px;
+                        }
+                        .download-btn:hover { background: #0056b3; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="file-info">
+                            <h1 class="file-title">%s</h1>
+                            <div class="file-details">文件类型: %s · 大小: %s</div>
+                        </div>
+                        <div class="preview-message">
+                            <p>文档预览功能正在开发中</p>
+                            <p>请下载文件后使用本地软件查看</p>
+                            <a href="%s" class="download-btn" download>下载文件</a>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(
+                    file.getTitle(),
+                    file.getTitle(),
+                    fileType.toUpperCase(), 
+                    formatFileSize(file.getFileSize()),
+                    downloadUrl
+                );
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_HTML)
+                .body(officeViewerHtml);
+                
+        } catch (Exception e) {
+            log.error("Office文档预览失败: {}", e.getMessage());
+            return ResponseEntity.status(500)
+                .contentType(MediaType.TEXT_HTML)
+                .body("<html><body><div class='error'><h3>Office文档预览失败: " + e.getMessage() + "</h3></div></body></html>");
+        }
     }
 
     /**
@@ -311,5 +408,20 @@ public class PreviewController {
                    .replace(">", "&gt;")
                    .replace("\"", "&quot;")
                    .replace("'", "&#39;");
+    }
+
+    /**
+     * 格式化文件大小
+     */
+    private String formatFileSize(long size) {
+        if (size < 1024) {
+            return size + " B";
+        } else if (size < 1024 * 1024) {
+            return String.format("%.1f KB", size / 1024.0);
+        } else if (size < 1024 * 1024 * 1024) {
+            return String.format("%.1f MB", size / (1024.0 * 1024));
+        } else {
+            return String.format("%.1f GB", size / (1024.0 * 1024 * 1024));
+        }
     }
 }

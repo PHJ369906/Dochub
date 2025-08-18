@@ -40,6 +40,7 @@ export interface FileCategory {
   createdBy: number
   children?: FileCategory[]
   files?: PolicyFile[]
+  fileCount?: number
 }
 
 export interface FileTag {
