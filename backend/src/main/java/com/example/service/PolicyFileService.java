@@ -63,9 +63,16 @@ public class PolicyFileService {
             policyFile.setTitle(title != null ? title : file.getOriginalFilename());
             policyFile.setOriginalName(file.getOriginalFilename());
             
-            // 确保存储文件名不为null
-            String storedFileName = java.nio.file.Paths.get(filePath).getFileName().toString();
-            policyFile.setFileName(storedFileName != null ? storedFileName : file.getOriginalFilename());
+            // 确保存储文件名不为null，使用安全的文件名提取方式
+            String storedFileName;
+            try {
+                storedFileName = java.nio.file.Paths.get(filePath).getFileName().toString();
+            } catch (Exception e) {
+                // 如果Path操作失败，使用字符串操作提取文件名
+                log.warn("无法使用Path提取文件名，使用字符串方式: {}", e.getMessage());
+                storedFileName = extractFileNameFromPath(filePath);
+            }
+            policyFile.setFileName(storedFileName != null && !storedFileName.isEmpty() ? storedFileName : file.getOriginalFilename());
             
             policyFile.setFilePath(filePath);
             policyFile.setFileSize(file.getSize());
@@ -330,6 +337,27 @@ public class PolicyFileService {
         return fileMapper.selectPage(pageParam, queryWrapper);
     }
     
+    /**
+     * 从路径字符串中提取文件名的安全方法
+     */
+    private String extractFileNameFromPath(String filePath) {
+        if (filePath == null || filePath.trim().isEmpty()) {
+            return null;
+        }
+        
+        // 统一使用正斜杠处理路径
+        String normalizedPath = filePath.replace("\\", "/");
+        
+        // 提取最后一个斜杠后的文件名
+        int lastSlashIndex = normalizedPath.lastIndexOf("/");
+        if (lastSlashIndex >= 0 && lastSlashIndex < normalizedPath.length() - 1) {
+            return normalizedPath.substring(lastSlashIndex + 1);
+        }
+        
+        // 如果没有找到斜杠，说明整个字符串就是文件名
+        return normalizedPath;
+    }
+
     /**
      * 获取文件扩展名
      */
