@@ -25,7 +25,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/api/auth/login",
-                        "/api/auth/register",
+                        "/api/auth/register", 
                         "/api/auth/check",
                         "/api/files/popular",
                         "/api/files/latest",
@@ -40,7 +40,17 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         "/v3/api-docs/**",
                         "/favicon.ico",
                         "/error",
-                        "/actuator/**"
+                        "/actuator/**",
+                        // 静态资源
+                        "/",
+                        "/index.html",
+                        "/static/**",
+                        "/assets/**",
+                        "/*.js",
+                        "/*.css",
+                        "/*.png", 
+                        "/*.jpg",
+                        "/*.ico"
                 );
     }
 
