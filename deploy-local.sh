@@ -106,21 +106,31 @@ check_docker() {
     fi
 }
 
-# 清理旧的Redis和MySQL容器
-cleanup_containers() {
-    log_info "清理旧的Redis和MySQL容器..."
+# 检查并启动数据库服务
+check_database_services() {
+    log_info "检查数据库服务状态..."
     
-    # 停止并删除旧容器
-    containers=("doc-center-mysql" "doc-center-redis")
-    for container in "${containers[@]}"; do
-        if docker ps -a | grep -q "$container"; then
-            log_info "停止并删除容器: $container"
-            docker stop "$container" 2>/dev/null || true
-            docker rm "$container" 2>/dev/null || true
-        fi
-    done
+    # 检查MySQL容器
+    if docker ps | grep -q "doc-center-mysql.*Up"; then
+        log_success "MySQL容器已运行"
+    elif docker ps -a | grep -q "doc-center-mysql"; then
+        log_info "启动已存在的MySQL容器..."
+        docker start doc-center-mysql
+    else
+        log_info "MySQL容器不存在，将通过docker-compose创建"
+    fi
     
-    # 删除旧的卷数据（可选）
+    # 检查Redis容器
+    if docker ps | grep -q "doc-center-redis.*Up"; then
+        log_success "Redis容器已运行"
+    elif docker ps -a | grep -q "doc-center-redis"; then
+        log_info "启动已存在的Redis容器..."
+        docker start doc-center-redis
+    else
+        log_info "Redis容器不存在，将通过docker-compose创建"
+    fi
+    
+    # 仅在需要清理数据时删除卷
     if [ "$CLEAN_DATA" == "true" ]; then
         log_warning "清理数据卷..."
         docker volume rm $(docker volume ls -q | grep -E "(mysql_data|redis_data)") 2>/dev/null || true
@@ -388,8 +398,18 @@ build_docker_image() {
 start_services() {
     log_info "启动所有服务..."
     
-    # 停止现有服务
-    docker-compose -f docker-compose.local.yml down 2>/dev/null || true
+    # 只停止应用服务，保留数据库服务
+    if docker ps | grep -q "doc-center-app"; then
+        log_info "停止现有应用服务..."
+        docker stop doc-center-app 2>/dev/null || true
+        docker rm doc-center-app 2>/dev/null || true
+    fi
+    
+    if docker ps | grep -q "doc-center-nginx"; then
+        log_info "停止现有Nginx服务..."
+        docker stop doc-center-nginx 2>/dev/null || true
+        docker rm doc-center-nginx 2>/dev/null || true
+    fi
     
     # 启动服务
     docker-compose -f docker-compose.local.yml up -d
@@ -497,7 +517,7 @@ main() {
     check_docker
     check_java_maven
     install_nodejs
-    cleanup_containers
+    check_database_services
     build_frontend
     build_backend
     create_dockerfile
