@@ -53,6 +53,10 @@ public class FileCategory {
     @JsonIgnore
     private List<PolicyFile> files;
 
+    // 文件数量统计（不映射到数据库）
+    @TableField(exist = false)
+    private Long fileCount = 0L;
+
     // Getter and Setter methods (手动添加以解决Lombok编译问题)
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -86,4 +90,7 @@ public class FileCategory {
     
     public List<PolicyFile> getFiles() { return files; }
     public void setFiles(List<PolicyFile> files) { this.files = files; }
+    
+    public Long getFileCount() { return fileCount; }
+    public void setFileCount(Long fileCount) { this.fileCount = fileCount; }
 }

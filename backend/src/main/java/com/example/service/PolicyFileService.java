@@ -145,9 +145,12 @@ public class PolicyFileService {
             );
         }
         
-        // 分类过滤
+        // 分类过滤（包含子分类）
         if (categoryId != null) {
-            queryWrapper.eq("category_id", categoryId);
+            List<Long> categoryIds = categoryMapper.findCategoryAndChildrenIds(categoryId);
+            if (!categoryIds.isEmpty()) {
+                queryWrapper.in("category_id", categoryIds);
+            }
         }
         
         // 发布机关过滤

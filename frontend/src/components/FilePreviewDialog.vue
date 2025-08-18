@@ -328,7 +328,7 @@ const openOnlinePreview = () => {
   if (!props.file) return
   
   // 使用新的在线预览API
-  onlinePreviewUrl.value = `/api/preview/onlinePreview?fileId=${props.file.id}`
+  onlinePreviewUrl.value = `/api/preview/onlinePreview?url=${props.file.id}`
   showIframe.value = true
 }
 
