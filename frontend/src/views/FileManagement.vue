@@ -28,7 +28,7 @@
           <h3 class="sidebar-title">分类</h3>
           <el-button
             v-if="user?.role === 'admin'"
-            type="text"
+            link
             size="small"
             @click="() => { currentEditCategory = null; showCategoryDialog = true }"
             class="add-btn"
@@ -55,10 +55,10 @@
                   <span class="category-count">{{ data.fileCount || 0 }}</span>
                 </div>
                 <div v-if="user?.role === 'admin'" class="category-actions">
-                  <el-button type="text" size="small" @click.stop="editCategory(data)" class="action-edit">
+                  <el-button link size="small" @click.stop="editCategory(data)" class="action-edit">
                     <el-icon><Edit /></el-icon>
                   </el-button>
-                  <el-button type="text" size="small" @click.stop="deleteCategory(data)" class="action-delete">
+                  <el-button link size="small" @click.stop="deleteCategory(data)" class="action-delete">
                     <el-icon><Delete /></el-icon>
                   </el-button>
                 </div>
