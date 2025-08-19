@@ -1,50 +1,4 @@
-# 多阶段构建 Dockerfile
-# 第一阶段：构建前端
-FROM registry.cn-hangzhou.aliyuncs.com/library/node:18-alpine AS frontend-builder
-
-# 设置镜像源以加快下载速度
-RUN npm config set registry https://registry.npmmirror.com/
-
-WORKDIR /app/frontend
-
-# 复制前端依赖文件
-COPY frontend/package*.json ./
-
-# 安装依赖（包含开发依赖，因为构建需要）
-RUN npm ci
-
-# 复制前端源码
-COPY frontend/ ./
-
-# 设置构建环境变量
-ARG API_BASE_URL=http://localhost:8080
-ENV VITE_API_BASE_URL=${API_BASE_URL}
-
-# 构建前端
-RUN npm run build
-
-# 第二阶段：构建后端
-FROM registry.cn-hangzhou.aliyuncs.com/library/maven:3.9-openjdk-17 AS backend-builder
-
-# 设置Maven镜像源
-RUN mkdir -p /root/.m2 && \
-    echo '<settings><mirrors><mirror><id>aliyunmaven</id><mirrorOf>*</mirrorOf><name>阿里云公共仓库</name><url>https://maven.aliyun.com/repository/public</url></mirror></mirrors></settings>' > /root/.m2/settings.xml
-
-WORKDIR /app/backend
-
-# 复制Maven配置文件
-COPY backend/pom.xml ./
-
-# 下载依赖
-RUN mvn dependency:go-offline -B
-
-# 复制后端源码
-COPY backend/src ./src
-
-# 构建后端
-RUN mvn clean package -DskipTests -B
-
-# 第三阶段：运行时镜像
+# 运行时 Dockerfile（宿主机预编译版本）
 FROM registry.cn-hangzhou.aliyuncs.com/library/openjdk:17-jre-slim
 
 # 安装必要的工具和字体
@@ -60,9 +14,9 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 WORKDIR /app
 
-# 从构建阶段复制构建产物
-COPY --from=backend-builder /app/backend/target/*.jar app.jar
-COPY --from=frontend-builder /app/frontend/dist ./static
+# 从宿主机复制构建产物（在部署脚本中预先构建）
+COPY backend/target/*.jar app.jar
+COPY frontend/dist ./static
 
 # 创建必要的目录
 RUN mkdir -p uploads logs config && \
