@@ -171,6 +171,26 @@ public class PolicyFileService {
             queryWrapper.le("create_time", endDate);
         }
         
+        // 标签过滤 - 使用EXISTS子查询找到包含指定标签的文件
+        if (tagNames != null && !tagNames.isEmpty()) {
+            List<String> tagNameList = new ArrayList<>(tagNames);
+            // 使用EXISTS查询，对每个标签名进行安全的参数化查询
+            StringBuilder tagQuery = new StringBuilder();
+            tagQuery.append("EXISTS (SELECT 1 FROM policy_file_tag pft ")
+                    .append("INNER JOIN file_tag ft ON pft.tag_id = ft.id ")
+                    .append("WHERE pft.file_id = policy_file.id AND ft.name IN (");
+            
+            for (int i = 0; i < tagNameList.size(); i++) {
+                if (i > 0) tagQuery.append(",");
+                tagQuery.append("'").append(tagNameList.get(i).replace("'", "''")).append("'");
+            }
+            tagQuery.append("))");
+            
+            queryWrapper.apply(tagQuery.toString());
+            
+            log.debug("标签筛选查询: 标签={}, SQL条件={}", tagNameList, tagQuery.toString());
+        }
+        
         // 排序
         queryWrapper.orderByDesc("create_time");
         
