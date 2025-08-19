@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 核心架构组件
 - **frontend/**: Vue3 + TypeScript + Element Plus + Tailwind CSS 前端应用
 - **backend/**: Spring Boot 3.x + Sa-Token + MyBatis-Plus + MySQL 后端服务
-- **kkFileView/**: 集成的开源文件预览服务，支持多种文档格式
+- **内置预览**: 支持PDF、图片、文本等基础文件预览功能
 - **sql/**: 数据库初始化和迁移脚本
 
 ## 开发环境设置

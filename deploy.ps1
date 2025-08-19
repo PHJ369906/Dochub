@@ -167,7 +167,7 @@ function Deploy-Services {
 function Test-ServicesHealth {
     Write-Info "检查服务健康状态..."
     
-    $services = @("doc-center-mysql", "doc-center-redis", "doc-center-kkfileview", "doc-center-app", "doc-center-nginx")
+    $services = @("doc-center-mysql", "doc-center-redis", "doc-center-app", "doc-center-nginx")
     
     foreach ($service in $services) {
         $containers = docker ps --format "table {{.Names}}" | Select-String $service
@@ -202,7 +202,7 @@ function Show-DeploymentInfo {
     Write-Host "===================================" -ForegroundColor Cyan
     Write-Host "应用访问地址: http://localhost"
     Write-Host "API接口地址:  http://localhost/api"
-    Write-Host "文件预览地址: http://localhost/preview"
+    Write-Host "文件预览地址: http://localhost/api/preview"
     Write-Host ""
     Write-Host "默认管理员账户:"
     Write-Host "用户名: admin"
