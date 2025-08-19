@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -84,7 +85,17 @@ public class PreviewController {
         try {
             PolicyFile file = fileService.getFileById(id);
             if (file == null) {
-                return ResponseEntity.notFound().build();
+                log.warn("尝试预览不存在的PDF文件: 文件ID={}", id);
+                String errorHtml = """
+                    <!DOCTYPE html>
+                    <html><head><meta charset="UTF-8"><title>文件不存在</title></head>
+                    <body><div style="text-align:center;padding:50px;">
+                    <h3>PDF文件不存在</h3><p>文件ID: %d</p><p>请检查文件是否已被删除</p>
+                    </div></body></html>
+                    """.formatted(id);
+                return ResponseEntity.status(404)
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(errorHtml);
             }
 
             // 使用PDF.js进行预览
@@ -103,7 +114,7 @@ public class PreviewController {
                 </head>
                 <body>
                     <div class="pdf-container">
-                        <iframe src="/api/files/%d/download#toolbar=1&navpanes=1&scrollbar=1"
+                        <iframe src="/api/preview/pdf/%d/content#toolbar=1&navpanes=1&scrollbar=1"
                                 type="application/pdf"
                                 title="PDF预览">
                         </iframe>
@@ -121,6 +132,51 @@ public class PreviewController {
             return ResponseEntity.status(500)
                 .contentType(MediaType.TEXT_HTML)
                 .body("<html><body><div class='error'><h3>PDF预览失败: " + e.getMessage() + "</h3></div></body></html>");
+        }
+    }
+
+    /**
+     * 获取PDF文件内容用于预览
+     */
+    @Operation(summary = "获取PDF文件内容用于预览")
+    @GetMapping("/pdf/{id}/content")
+    public ResponseEntity<Resource> getPdfContent(@PathVariable Long id) {
+        try {
+            PolicyFile file = fileService.getFileById(id);
+            if (file == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // 检查是否为PDF文件
+            if (!"pdf".equalsIgnoreCase(file.getFileType())) {
+                log.warn("尝试预览非PDF文件: 文件ID={}, 文件类型={}", id, file.getFileType());
+                return ResponseEntity.badRequest().build();
+            }
+
+            Path filePath = storageService.getFilePath(file.getFilePath());
+            log.debug("尝试访问PDF文件: {}", filePath.toString());
+            
+            Resource resource = new UrlResource(filePath.toUri());
+            
+            if (!resource.exists()) {
+                log.warn("PDF文件不存在: {} (文件ID: {}, 数据库路径: {})", 
+                    filePath.toString(), file.getId(), file.getFilePath());
+                return ResponseEntity.notFound().build();
+            }
+
+            // 对中文文件名进行URL编码
+            String encodedFileName = URLEncoder.encode(file.getOriginalName(), StandardCharsets.UTF_8)
+                    .replace("+", "%20"); // 替换空格编码
+            
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                        "inline; filename*=UTF-8''" + encodedFileName)
+                    .body(resource);
+                    
+        } catch (Exception e) {
+            log.error("获取PDF文件内容失败: {}", e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -228,9 +284,14 @@ public class PreviewController {
                 contentType = "image/" + fileType;
             }
 
+            // 对中文文件名进行URL编码
+            String encodedFileName = URLEncoder.encode(file.getOriginalName(), StandardCharsets.UTF_8)
+                    .replace("+", "%20"); // 替换空格编码
+
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getOriginalName() + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                        "inline; filename*=UTF-8''" + encodedFileName)
                     .body(resource);
         } catch (Exception e) {
             log.error("获取图片预览失败: {}", e.getMessage());

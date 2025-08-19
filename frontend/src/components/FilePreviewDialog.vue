@@ -68,49 +68,20 @@
 
         <!-- PDF预览 -->
         <div v-else-if="previewType === 'pdf'" class="pdf-preview">
-          <div class="pdf-controls">
-            <el-button-group>
-              <el-button @click="prevPage" :disabled="currentPage <= 0">上一页</el-button>
-              <el-button @click="nextPage" :disabled="currentPage >= totalPages - 1">下一页</el-button>
-            </el-button-group>
-            <span class="page-info">{{ currentPage + 1 }} / {{ totalPages }}</span>
-            <el-select v-model="pdfDpi" @change="loadPdfPage" style="width: 100px;">
-              <el-option label="72 DPI" :value="72" />
-              <el-option label="150 DPI" :value="150" />
-              <el-option label="300 DPI" :value="300" />
-            </el-select>
-          </div>
-          <div class="pdf-content">
-            <img v-if="pdfPageUrl" :src="pdfPageUrl" alt="PDF页面" style="max-width: 100%; height: auto;" />
-          </div>
+          <iframe
+            :src="pdfPreviewUrl"
+            style="width: 100%; height: 600px; border: none;"
+          />
         </div>
 
         <!-- Office文档预览 -->
         <div v-else-if="previewType === 'office'" class="office-preview">
-          <!-- 统一预览按钮 -->
-          <div class="preview-actions">
-            <el-button type="primary" @click="openOnlinePreview">
-              <el-icon><View /></el-icon>
-              在线预览
-            </el-button>
-            <el-button @click="downloadFile">
-              <el-icon><Download /></el-icon>
-              下载文件
-            </el-button>
-          </div>
-          
           <!-- 内嵌预览框架 -->
           <iframe
-            v-if="showIframe"
             :src="onlinePreviewUrl"
-            style="width: 100%; height: 600px; border: none; margin-top: 16px;"
+            style="width: 100%; height: 600px; border: none;"
             @load="iframeLoaded"
           />
-          
-          <div v-else class="no-preview">
-            <el-icon class="no-preview-icon"><Document /></el-icon>
-            <p>点击"在线预览"查看文档内容</p>
-          </div>
         </div>
 
         <!-- 文本预览 -->
@@ -133,10 +104,6 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="downloadFile">
-          <el-icon><Download /></el-icon>
-          下载文件
-        </el-button>
         <el-button @click="handleClose">关闭</el-button>
       </div>
     </template>
@@ -172,11 +139,6 @@ const emit = defineEmits<Emits>()
 const previewLoading = ref(false)
 const previewInfo = ref<FilePreviewInfo | null>(null)
 const textContent = ref('')
-const currentPage = ref(0)
-const totalPages = ref(1)
-const pdfDpi = ref(150)
-const pdfPageUrl = ref('')
-const showIframe = ref(false)
 const onlinePreviewUrl = ref('')
 
 const dialogVisible = computed({
@@ -220,6 +182,11 @@ const officePreviewUrl = computed(() => {
   return getOfficePreview(props.file.id)
 })
 
+const pdfPreviewUrl = computed(() => {
+  if (!props.file || previewType.value !== 'pdf') return ''
+  return getPdfPagePreview(props.file.id, 0, 150)
+})
+
 const loadPreviewInfo = async () => {
   if (!props.file) return
 
@@ -230,12 +197,11 @@ const loadPreviewInfo = async () => {
       previewInfo.value = response.data
 
       // 根据文件类型加载相应内容
-      if (previewType.value === 'pdf') {
-        totalPages.value = response.data.pageCount || 1
-        currentPage.value = 0
-        loadPdfPage()
-      } else if (previewType.value === 'text') {
+      if (previewType.value === 'text') {
         await loadTextContent()
+      } else if (previewType.value === 'office') {
+        // Office文档自动加载预览
+        onlinePreviewUrl.value = `/api/preview/onlinePreview?url=${props.file.id}`
       }
     } else {
       ElMessage.error(response.message || '加载预览信息失败')
@@ -261,24 +227,6 @@ const loadTextContent = async () => {
   }
 }
 
-const loadPdfPage = () => {
-  if (!props.file) return
-  pdfPageUrl.value = getPdfPagePreview(props.file.id, currentPage.value, pdfDpi.value)
-}
-
-const prevPage = () => {
-  if (currentPage.value > 0) {
-    currentPage.value--
-    loadPdfPage()
-  }
-}
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value - 1) {
-    currentPage.value++
-    loadPdfPage()
-  }
-}
 
 const downloadFile = async () => {
   if (props.file) {
@@ -324,13 +272,6 @@ const downloadFile = async () => {
   }
 }
 
-const openOnlinePreview = () => {
-  if (!props.file) return
-  
-  // 使用新的在线预览API
-  onlinePreviewUrl.value = `/api/preview/onlinePreview?url=${props.file.id}`
-  showIframe.value = true
-}
 
 const iframeLoaded = () => {
   // iframe加载完成
@@ -372,10 +313,6 @@ watch(dialogVisible, (visible) => {
     // 重置状态
     previewInfo.value = null
     textContent.value = ''
-    currentPage.value = 0
-    totalPages.value = 1
-    pdfPageUrl.value = ''
-    showIframe.value = false
     onlinePreviewUrl.value = ''
   }
 })
@@ -468,14 +405,6 @@ watch(dialogVisible, (visible) => {
   height: 600px;
 }
 
-.preview-actions {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e6e6e6;
-  justify-content: center;
-}
 
 .text-preview {
   padding: 20px;
