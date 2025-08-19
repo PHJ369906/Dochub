@@ -133,6 +133,7 @@
                 placeholder="标签"
                 clearable
                 class="filter-select"
+                @change="handleTagsChange"
               >
                 <el-option
                   v-for="tag in availableTags"
@@ -532,6 +533,13 @@ const handleDateRangeChange = (dates: [Date, Date] | null) => {
     searchForm.startDate = undefined
     searchForm.endDate = undefined
   }
+  // 日期范围变化时自动触发搜索
+  handleSearch()
+}
+
+const handleTagsChange = () => {
+  // 标签变化时自动触发搜索
+  handleSearch()
 }
 
 const refreshFileList = () => {
