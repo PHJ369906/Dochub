@@ -342,7 +342,7 @@ import {
   View, Download, MoreFilled, RefreshLeft, ArrowDown
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { getFileList, getCategories, deleteFile, createCategory, deleteCategory as deleteCategoryApi, updateCategory } from '@/api/file'
+import { getFileList, getCategories, deleteFile, createCategory, deleteCategory as deleteCategoryApi, updateCategory, getAllTags } from '@/api/file'
 import type { PolicyFile, FileCategory, FileSearchParams } from '@/types/file'
 import FileUploadDialog from '@/components/FileUploadDialog.vue'
 import CategoryDialog from '@/components/CategoryDialog.vue'
@@ -405,6 +405,7 @@ const categoryTreeRef = ref()
 // 生命周期
 onMounted(() => {
   loadCategories()
+  loadTags()
   loadFileList()
 })
 
@@ -419,6 +420,17 @@ const loadCategories = async () => {
     }
   } catch (error) {
     ElMessage.error('加载分类失败')
+  }
+}
+
+const loadTags = async () => {
+  try {
+    const response = await getAllTags()
+    if (response.code === 200) {
+      availableTags.value = response.data
+    }
+  } catch (error) {
+    console.error('加载标签失败:', error)
   }
 }
 

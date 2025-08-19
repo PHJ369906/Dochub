@@ -128,3 +128,8 @@ export const moveCategory = (id: number, newParentId?: number) => {
 export const getCategoryStats = (id: number) => {
   return request.get(`/categories/${id}/stats`)
 }
+
+// 获取所有标签
+export const getAllTags = () => {
+  return request.get('/files/all-tags')
+}
