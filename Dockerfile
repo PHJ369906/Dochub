@@ -1,14 +1,8 @@
 # 运行时 Dockerfile（使用宿主机JDK）
-FROM alpine:3.18
-
-# 安装必要的工具
-RUN apk add --no-cache \
-    curl \
-    wget \
-    bash
+FROM busybox:latest
 
 # 创建非root用户
-RUN addgroup -S appuser && adduser -S -G appuser appuser
+RUN addgroup appuser && adduser -D -G appuser appuser
 
 WORKDIR /app
 
@@ -23,9 +17,9 @@ RUN mkdir -p uploads logs config && \
 # 暴露端口
 EXPOSE 8080
 
-# 健康检查
+# 健康检查（简化版本）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/actuator/health || exit 1
+    CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
 
 # 切换到非root用户
 USER appuser

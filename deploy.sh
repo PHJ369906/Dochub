@@ -158,7 +158,8 @@ deploy_services() {
     
     # 构建并启动服务
     log_info "构建Docker镜像并启动服务..."
-    docker-compose -f docker-compose.prod.yml up -d --build
+    docker-compose -f docker-compose.prod.yml build --pull never
+    docker-compose -f docker-compose.prod.yml up -d
     
     # 等待服务启动
     log_info "等待服务启动..."
