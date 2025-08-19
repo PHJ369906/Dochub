@@ -158,9 +158,9 @@ deploy_services() {
     
     # 确保基础镜像存在
     log_info "检查基础镜像..."
-    if ! docker images busybox:1.35 | grep -q busybox; then
-        log_info "拉取busybox镜像..."
-        docker pull busybox:1.35 || log_warning "无法拉取busybox镜像，尝试使用本地已有镜像"
+    if ! docker images openjdk:17-jre-slim | grep -q openjdk; then
+        log_info "拉取OpenJDK镜像..."
+        docker pull openjdk:17-jre-slim || log_warning "无法拉取OpenJDK镜像，尝试使用本地已有镜像"
     fi
     
     # 构建并启动服务

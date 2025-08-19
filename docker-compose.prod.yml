@@ -69,11 +69,6 @@ services:
       - app_uploads:/app/uploads
       - app_logs:/app/logs
       - ./config/application-prod.yml:/app/config/application-prod.yml
-      # CentOS Java环境挂载
-      - /etc/alternatives/java:/usr/bin/java:ro
-      - /usr/lib/jvm:/usr/lib/jvm:ro
-      - /lib64:/lib64:ro
-      - /usr/lib64:/usr/lib64:ro
     depends_on:
       mysql:
         condition: service_healthy
