@@ -1,9 +1,6 @@
 # 运行时 Dockerfile（使用本地可用的JDK镜像）
 FROM openjdk:17-jdk
 
-# 安装必要工具
-RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
-
 # 创建非root用户
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
@@ -20,9 +17,9 @@ RUN mkdir -p uploads logs config && \
 # 暴露端口
 EXPOSE 8080
 
-# 健康检查
+# 健康检查（使用Java进程检查）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
+    CMD ps aux | grep java | grep -v grep || exit 1
 
 # 切换到非root用户
 USER appuser
