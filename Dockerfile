@@ -1,5 +1,5 @@
 # 运行时 Dockerfile（使用宿主机JDK）
-FROM busybox:latest
+FROM busybox:1.35
 
 # 创建非root用户
 RUN addgroup appuser && adduser -D -G appuser appuser
