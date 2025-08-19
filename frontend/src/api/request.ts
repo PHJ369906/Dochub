@@ -8,6 +8,26 @@ const request = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
+  },
+  paramsSerializer: {
+    serialize: (params) => {
+      const urlSearchParams = new URLSearchParams()
+      
+      Object.entries(params).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          // 对于数组参数，使用多个同名参数而不是 key[]
+          value.forEach(item => {
+            if (item !== null && item !== undefined && item !== '') {
+              urlSearchParams.append(key, String(item))
+            }
+          })
+        } else if (value !== null && value !== undefined && value !== '') {
+          urlSearchParams.append(key, String(value))
+        }
+      })
+      
+      return urlSearchParams.toString()
+    }
   }
 })
 
