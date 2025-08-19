@@ -1,12 +1,10 @@
-# 运行时 Dockerfile（宿主机预编译版本）
-FROM registry.cn-hangzhou.aliyuncs.com/library/openjdk:17-jre-slim
+# 运行时 Dockerfile（使用宿主机JDK）
+FROM ubuntu:22.04
 
-# 安装必要的工具和字体
+# 安装必要的工具
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
-    fontconfig \
-    ttf-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建非root用户
@@ -32,8 +30,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # 切换到非root用户
 USER appuser
 
-# 设置JVM参数
-ENV JAVA_OPTS="-Xms512m -Xmx1g -Dspring.profiles.active=prod -Djava.security.egd=file:/dev/./urandom"
-
-# 启动应用
-CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# 启动应用（使用宿主机的java命令）
+CMD ["sh", "-c", "/usr/bin/java -Xms512m -Xmx1g -Dspring.profiles.active=prod -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
