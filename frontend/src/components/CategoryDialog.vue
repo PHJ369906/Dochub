@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    title="分类管理"
+    :title="props.editCategory ? '编辑分类' : '新建分类'"
     width="500px"
     :before-close="handleClose"
   >
@@ -54,7 +54,7 @@
       <div class="dialog-footer">
         <el-button @click="handleClose">取消</el-button>
         <el-button type="primary" :loading="saving" @click="handleSave">
-          {{ saving ? '保存中...' : '确定' }}
+          {{ saving ? '保存中...' : (props.editCategory ? '更新' : '确定') }}
         </el-button>
       </div>
     </template>
@@ -62,9 +62,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { createCategory } from '@/api/file'
+import { createCategory, updateCategory } from '@/api/file'
 import type { FileCategory, CategoryForm } from '@/types/file'
 
 interface Props {
@@ -155,16 +155,35 @@ const handleSave = async () => {
           sortOrder: categoryForm.sortOrder
         }
 
-        const response = await createCategory(requestData)
+        let response
+        if (props.editCategory) {
+          // 编辑模式
+          response = await updateCategory(props.editCategory.id!, {
+            ...requestData,
+            enabled: true // 默认保持启用状态
+          })
+          if (response.code === 200) {
+            ElMessage.success('分类更新成功')
+          } else {
+            ElMessage.error(response.message || '更新失败')
+          }
+        } else {
+          // 创建模式
+          response = await createCategory(requestData)
+          if (response.code === 200) {
+            ElMessage.success('分类创建成功')
+          } else {
+            ElMessage.error(response.message || '创建失败')
+          }
+        }
+        
         if (response.code === 200) {
-          ElMessage.success('分类创建成功')
           emit('success')
           resetForm()
-        } else {
-          ElMessage.error(response.message || '创建失败')
         }
       } catch (error: any) {
-        ElMessage.error(error.message || '创建失败')
+        const action = props.editCategory ? '更新' : '创建'
+        ElMessage.error(error.message || `${action}失败`)
       } finally {
         saving.value = false
       }
@@ -188,6 +207,20 @@ const resetForm = () => {
   })
   categoryFormRef.value?.resetFields()
 }
+
+// 监听编辑分类变化，自动填充表单
+watch(() => props.editCategory, (newCategory) => {
+  if (newCategory) {
+    Object.assign(categoryForm, {
+      name: newCategory.name || '',
+      description: newCategory.description || '',
+      parentId: newCategory.parentId,
+      sortOrder: newCategory.sortOrder || 0
+    })
+  } else {
+    resetForm()
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>

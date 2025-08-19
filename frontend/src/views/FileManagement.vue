@@ -30,7 +30,7 @@
             v-if="user?.role === 'admin'"
             type="text"
             size="small"
-            @click="showCategoryDialog = true"
+            @click="() => { currentEditCategory = null; showCategoryDialog = true }"
             class="add-btn"
           >
             <el-icon><Plus /></el-icon>
@@ -50,13 +50,15 @@
           >
             <template #default="{ node, data }">
               <div class="category-node">
-                <span class="category-name">{{ node.label }}</span>
-                <span class="category-count">{{ data.fileCount || 0 }}</span>
+                <div class="category-content">
+                  <span class="category-name">{{ node.label }}</span>
+                  <span class="category-count">{{ data.fileCount || 0 }}</span>
+                </div>
                 <div v-if="user?.role === 'admin'" class="category-actions">
-                  <el-button type="text" size="small" @click.stop="editCategory(data)">
+                  <el-button type="text" size="small" @click.stop="editCategory(data)" class="action-edit">
                     <el-icon><Edit /></el-icon>
                   </el-button>
-                  <el-button type="text" size="small" @click.stop="deleteCategory(data)">
+                  <el-button type="text" size="small" @click.stop="deleteCategory(data)" class="action-delete">
                     <el-icon><Delete /></el-icon>
                   </el-button>
                 </div>
@@ -311,6 +313,7 @@
     <CategoryDialog
       v-model="showCategoryDialog"
       :categories="categoryOptions"
+      :editCategory="currentEditCategory"
       @success="handleCategorySuccess"
     />
 
@@ -330,7 +333,7 @@ import {
   View, Download, MoreFilled, RefreshLeft, ArrowDown
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { getFileList, getCategories, deleteFile } from '@/api/file'
+import { getFileList, getCategories, deleteFile, createCategory, deleteCategory as deleteCategoryApi, updateCategory } from '@/api/file'
 import type { PolicyFile, FileCategory, FileSearchParams } from '@/types/file'
 import FileUploadDialog from '@/components/FileUploadDialog.vue'
 import CategoryDialog from '@/components/CategoryDialog.vue'
@@ -353,6 +356,9 @@ const showUploadDialog = ref(false)
 const showCategoryDialog = ref(false)
 const showPreviewDialog = ref(false)
 const showAdvancedSearch = ref(false)
+
+// 当前编辑的分类
+const currentEditCategory = ref<FileCategory | null>(null)
 
 // 搜索表单
 const searchForm = reactive<FileSearchParams>({
@@ -614,6 +620,7 @@ const handleUploadSuccess = () => {
 
 const handleCategorySuccess = () => {
   showCategoryDialog.value = false
+  currentEditCategory.value = null
   loadCategories()
 }
 
@@ -658,11 +665,52 @@ const getRowClassName = ({ rowIndex }: { rowIndex: number }) => {
 }
 
 const editCategory = (category: FileCategory) => {
-  // 编辑分类逻辑
+  // 设置当前编辑的分类
+  currentEditCategory.value = category
+  showCategoryDialog.value = true
 }
 
 const deleteCategory = async (category: FileCategory) => {
-  // 删除分类逻辑
+  try {
+    // 检查是否有子分类
+    if (category.children && category.children.length > 0) {
+      ElMessage.warning('该分类下还有子分类，请先删除子分类')
+      return
+    }
+    
+    // 检查是否有文件
+    if (category.fileCount && category.fileCount > 0) {
+      ElMessage.warning('该分类下还有文件，请先移动或删除文件')
+      return
+    }
+    
+    await ElMessageBox.confirm(
+      `确定要删除分类 "${category.name}" 吗？`,
+      '删除分类确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    const response = await deleteCategoryApi(category.id!)
+    if (response.code === 200) {
+      ElMessage.success('分类删除成功')
+      await loadCategories()
+      // 如果当前选中的是被删除的分类，清空选择
+      if (searchForm.categoryId === category.id) {
+        searchForm.categoryId = undefined
+        await loadFileList()
+      }
+    } else {
+      ElMessage.error(response.message || '删除失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }
 }
 
 // 批量删除文件
@@ -969,6 +1017,16 @@ const handleBatchAction = (command: string) => {
   border-radius: var(--radius-lg);
   margin-bottom: 0.125rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible !important;
+}
+
+.category-tree :deep(.el-tree-node__children) {
+  padding-left: 1rem !important;
+}
+
+.category-tree :deep(.el-tree-node__expand-icon) {
+  margin-right: 0.5rem !important;
+  color: var(--neutral-500) !important;
 }
 
 .category-tree :deep(.el-tree-node__content:hover) {
@@ -1006,6 +1064,7 @@ const handleBatchAction = (command: string) => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  min-width: 0; /* 允许子元素收缩 */
   padding: 1rem 0.75rem;
   border-radius: var(--radius-lg);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1014,6 +1073,14 @@ const handleBatchAction = (command: string) => {
   position: relative;
   background: transparent;
   border: 1px solid transparent;
+}
+
+.category-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0; /* 允许收缩 */
+  margin-right: 0.5rem;
 }
 
 .category-node::before {
@@ -1123,6 +1190,8 @@ const handleBatchAction = (command: string) => {
   transform: translateX(8px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
+  flex-shrink: 0; /* 防止收缩 */
+  min-width: 70px; /* 保证最小宽度 */
 }
 
 .category-node:hover .category-actions {
@@ -1162,6 +1231,16 @@ const handleBatchAction = (command: string) => {
 
 .category-actions .el-button .el-icon {
   font-size: 0.875rem;
+}
+
+/* 特殊样式确保操作按钮完整显示 */
+.category-tree :deep(.el-tree-node__content:hover) {
+  z-index: 10 !important;
+  position: relative !important;
+}
+
+.category-tree :deep(.el-tree-node__content) {
+  position: relative !important;
 }
 
 /* 分类树空状态 */
@@ -2477,6 +2556,11 @@ const handleBatchAction = (command: string) => {
     margin-right: 0.5rem;
   }
 
+  .category-actions {
+    min-width: 65px;
+    gap: 0.1rem;
+  }
+  
   .category-actions .el-button {
     width: 30px;
     height: 30px;
@@ -2624,6 +2708,11 @@ const handleBatchAction = (command: string) => {
     margin-right: 0.375rem;
   }
 
+  .category-actions {
+    min-width: 60px;
+    gap: 0.1rem;
+  }
+  
   .category-actions .el-button {
     width: 28px;
     height: 28px;
@@ -2700,6 +2789,11 @@ const handleBatchAction = (command: string) => {
     margin-right: 0.25rem;
   }
 
+  .category-actions {
+    min-width: 55px;
+    gap: 0.05rem;
+  }
+  
   .category-actions .el-button {
     width: 24px;
     height: 24px;
