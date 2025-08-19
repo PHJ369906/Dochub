@@ -418,4 +418,16 @@ public class PolicyFileService {
             return false;
         }
     }
+    
+    /**
+     * 获取所有标签
+     */
+    public List<FileTag> getAllTags() {
+        try {
+            return tagMapper.selectList(null);
+        } catch (Exception e) {
+            log.error("获取标签列表失败: {}", e.getMessage());
+            throw new RuntimeException("获取标签列表失败: " + e.getMessage());
+        }
+    }
 }

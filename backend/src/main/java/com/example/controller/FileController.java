@@ -6,6 +6,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.common.Result;
 import com.example.entity.PolicyFile;
+import com.example.entity.FileTag;
 
 import com.example.service.FileStorageService;
 import com.example.service.PolicyFileService;
@@ -612,6 +613,20 @@ public class FileController {
         } catch (Exception e) {
             log.error("检查批量上传权限失败: {}", e.getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * 获取所有标签
+     */
+    @Operation(summary = "获取所有标签")
+    @GetMapping("/all-tags")
+    public Result<List<FileTag>> getAllTags() {
+        try {
+            List<FileTag> tags = fileService.getAllTags();
+            return Result.success(tags);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
         }
     }
     
