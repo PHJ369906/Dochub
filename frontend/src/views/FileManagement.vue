@@ -327,7 +327,7 @@
     <FileEditDialog
       v-model="showFileEditDialog"
       :editFile="currentEditFile"
-      :categories="categories"
+      :categories="categoryOptions"
       :availableTags="availableTags"
       @success="handleFileEditSuccess"
     />
