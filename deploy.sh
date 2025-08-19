@@ -46,13 +46,22 @@ check_environment() {
     check_command "mvn"
     check_command "java"
     
-    # 检查Java版本
+    # 检查Java版本和路径
     JAVA_VERSION=$(java -version 2>&1 | head -n1 | cut -d'"' -f2 | cut -d'.' -f1)
     if [ "$JAVA_VERSION" -lt 17 ]; then
         log_error "需要Java 17或更高版本，当前版本: $JAVA_VERSION"
         exit 1
     fi
     log_info "Java版本检查通过: $(java -version 2>&1 | head -n1)"
+    
+    # 检查CentOS Java路径
+    if [ -f "/etc/alternatives/java" ]; then
+        log_info "检测到CentOS Java路径: /etc/alternatives/java"
+        JAVA_HOME_PATH=$(readlink -f /etc/alternatives/java | sed 's/\/bin\/java$//')
+        log_info "Java Home: $JAVA_HOME_PATH"
+    else
+        log_warning "未找到 /etc/alternatives/java，请确保Java正确安装"
+    fi
     
     # 检查Docker是否运行
     if ! docker info &> /dev/null; then
