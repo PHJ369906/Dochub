@@ -41,6 +41,9 @@ check_environment() {
     
     check_command "docker"
     check_command "docker-compose"
+    check_command "node"
+    check_command "npm"
+    check_command "mvn"
     
     # 检查Docker是否运行
     if ! docker info &> /dev/null; then
@@ -89,6 +92,29 @@ backup_data() {
     fi
 }
 
+# 宿主机构建
+build_on_host() {
+    log_info "在宿主机构建应用..."
+    
+    # 构建前端
+    log_info "构建前端..."
+    cd frontend
+    if [ ! -d "node_modules" ]; then
+        log_info "安装前端依赖..."
+        npm install
+    fi
+    npm run build
+    cd ..
+    
+    # 构建后端
+    log_info "构建后端..."
+    cd backend
+    mvn clean package -DskipTests -B
+    cd ..
+    
+    log_success "宿主机构建完成"
+}
+
 # 部署服务
 deploy_services() {
     log_info "开始部署服务..."
@@ -109,8 +135,11 @@ deploy_services() {
         docker volume prune -f
     fi
     
+    # 在宿主机构建
+    build_on_host
+    
     # 构建并启动服务
-    log_info "构建和启动服务..."
+    log_info "构建Docker镜像并启动服务..."
     docker-compose -f docker-compose.prod.yml up -d --build
     
     # 等待服务启动
