@@ -46,7 +46,12 @@ services:
 
   # 主应用服务
   app:
-    image: doc-center-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - API_BASE_URL=http://localhost
+    image: doc-center-app:latest
     container_name: doc-center-app
     restart: unless-stopped
     ports:
