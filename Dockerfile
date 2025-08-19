@@ -1,14 +1,14 @@
 # 运行时 Dockerfile（使用宿主机JDK）
-FROM ubuntu:22.04
+FROM alpine:3.18
 
 # 安装必要的工具
-RUN apt-get update && apt-get install -y \
+RUN apk add --no-cache \
     curl \
     wget \
-    && rm -rf /var/lib/apt/lists/*
+    bash
 
 # 创建非root用户
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN addgroup -S appuser && adduser -S -G appuser appuser
 
 WORKDIR /app
 
