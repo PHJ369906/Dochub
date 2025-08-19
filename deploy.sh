@@ -125,7 +125,7 @@ deploy_services() {
 check_services_health() {
     log_info "检查服务健康状态..."
     
-    services=("doc-center-mysql" "doc-center-redis" "doc-center-kkfileview" "doc-center-app" "doc-center-nginx")
+    services=("doc-center-mysql" "doc-center-redis" "doc-center-app" "doc-center-nginx")
     
     for service in "${services[@]}"; do
         if docker ps | grep -q "$service"; then
@@ -154,7 +154,7 @@ show_deployment_info() {
     echo "==================================="
     echo "应用访问地址: http://localhost"
     echo "API接口地址:  http://localhost/api"
-    echo "文件预览地址: http://localhost/preview"
+    echo "文件预览地址: http://localhost/api/preview"
     echo
     echo "默认管理员账户:"
     echo "用户名: admin"
