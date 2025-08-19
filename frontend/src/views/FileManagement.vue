@@ -322,6 +322,15 @@
       v-model="showPreviewDialog"
       :file="currentPreviewFile"
     />
+
+    <!-- 文件编辑对话框 -->
+    <FileEditDialog
+      v-model="showFileEditDialog"
+      :editFile="currentEditFile"
+      :categories="categories"
+      :availableTags="availableTags"
+      @success="handleFileEditSuccess"
+    />
   </div>
 </template>
 
@@ -338,6 +347,7 @@ import type { PolicyFile, FileCategory, FileSearchParams } from '@/types/file'
 import FileUploadDialog from '@/components/FileUploadDialog.vue'
 import CategoryDialog from '@/components/CategoryDialog.vue'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
+import FileEditDialog from '@/components/FileEditDialog.vue'
 
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
@@ -356,9 +366,11 @@ const showUploadDialog = ref(false)
 const showCategoryDialog = ref(false)
 const showPreviewDialog = ref(false)
 const showAdvancedSearch = ref(false)
+const showFileEditDialog = ref(false)
 
-// 当前编辑的分类
+// 当前编辑的分类和文件
 const currentEditCategory = ref<FileCategory | null>(null)
+const currentEditFile = ref<PolicyFile | null>(null)
 
 // 搜索表单
 const searchForm = reactive<FileSearchParams>({
@@ -583,12 +595,17 @@ const canEditFile = (file: PolicyFile) => {
 const handleFileAction = async ({ action, file }: { action: string, file: PolicyFile }) => {
   switch (action) {
     case 'edit':
-      // 编辑文件逻辑
+      editFile(file)
       break
     case 'delete':
       await handleDeleteFile(file)
       break
   }
+}
+
+const editFile = (file: PolicyFile) => {
+  currentEditFile.value = file
+  showFileEditDialog.value = true
 }
 
 const handleDeleteFile = async (file: PolicyFile) => {
@@ -622,6 +639,12 @@ const handleCategorySuccess = () => {
   showCategoryDialog.value = false
   currentEditCategory.value = null
   loadCategories()
+}
+
+const handleFileEditSuccess = () => {
+  showFileEditDialog.value = false
+  currentEditFile.value = null
+  loadFileList()
 }
 
 const formatFileSize = (size: number) => {
