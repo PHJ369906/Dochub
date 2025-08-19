@@ -156,10 +156,16 @@ deploy_services() {
     # 在宿主机构建
     build_on_host
     
+    # 确保基础镜像存在
+    log_info "检查基础镜像..."
+    if ! docker images busybox:1.35 | grep -q busybox; then
+        log_info "拉取busybox镜像..."
+        docker pull busybox:1.35 || log_warning "无法拉取busybox镜像，尝试使用本地已有镜像"
+    fi
+    
     # 构建并启动服务
     log_info "构建Docker镜像并启动服务..."
-    docker-compose -f docker-compose.prod.yml build --pull never
-    docker-compose -f docker-compose.prod.yml up -d
+    docker-compose -f docker-compose.prod.yml up -d --build
     
     # 等待服务启动
     log_info "等待服务启动..."
