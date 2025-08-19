@@ -1,5 +1,5 @@
-# 运行时 Dockerfile（使用轻量级JRE）
-FROM openjdk:17-jre-slim
+# 运行时 Dockerfile（使用本地可用的JDK镜像）
+FROM openjdk:17-jdk
 
 # 安装必要工具
 RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
