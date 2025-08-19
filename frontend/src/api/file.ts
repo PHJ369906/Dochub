@@ -32,7 +32,7 @@ export const getFileDetail = (id: number) => {
 
 // 更新文件信息
 export const updateFile = (id: number, data: any) => {
-  return request.put(`/files/${id}`, data)
+  return request.put(`/files/${id}`, null, { params: data })
 }
 
 // 删除文件
