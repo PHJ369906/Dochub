@@ -1,112 +1,109 @@
 <template>
-  <div class="users-container">
-    <el-page-header @back="goBack" content="用户管理" />
-    
-    <div class="users-content">
-      <el-card>
-        <template #header>
-          <div class="card-header">
-            <span>用户列表</span>
-            <el-button type="primary" @click="refreshData">
-              <el-icon><Refresh /></el-icon>
-              刷新
-            </el-button>
-          </div>
-        </template>
-        
-        <!-- 搜索栏 -->
-        <div class="search-bar">
-          <el-form :model="searchForm" inline>
-            <el-form-item label="用户名">
-              <el-input
-                v-model="searchForm.username"
-                placeholder="请输入用户名"
-                clearable
-                style="width: 200px"
-              />
-            </el-form-item>
-            <el-form-item label="角色">
-              <el-select
-                v-model="searchForm.role"
-                placeholder="请选择角色"
-                clearable
-                style="width: 120px"
-              >
-                <el-option label="管理员" value="admin" />
-                <el-option label="普通用户" value="user" />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="handleSearch">搜索</el-button>
-              <el-button @click="handleReset">重置</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-        
-        <!-- 用户表格 -->
-        <el-table
-          v-loading="loading"
-          :data="userList"
-          style="width: 100%"
-          stripe
-        >
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="username" label="用户名" />
-          <el-table-column prop="email" label="邮箱" />
-          <el-table-column prop="role" label="角色" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.role === 'admin' ? 'danger' : 'primary'">
-                {{ row.role === 'admin' ? '管理员' : '普通用户' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="enabled" label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.enabled ? 'success' : 'danger'">
-                {{ row.enabled ? '正常' : '禁用' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="createTime" label="注册时间" width="180">
-            <template #default="{ row }">
-              {{ formatDate(row.createTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
-            <template #default="{ row }">
-              <el-button
-                type="primary"
-                size="small"
-                @click="handleView(row)"
-                :loading="viewLoading === row.id"
-              >
-                查看
-              </el-button>
-              <el-button
-                :type="row.enabled ? 'danger' : 'success'"
-                size="small"
-                @click="handleToggleStatus(row)"
-                :loading="toggleLoading === row.id"
-              >
-                {{ row.enabled ? '禁用' : '启用' }}
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        
-        <!-- 分页 -->
-        <div class="pagination-container">
-          <el-pagination
-            v-model:current-page="pagination.page"
-            v-model:page-size="pagination.size"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="pagination.total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
+  <div class="users-page fade-in">
+    <div class="page-header">
+      <div class="header-left">
+        <h1 class="page-title">用户管理</h1>
+        <p class="page-subtitle">管理系统用户和权限</p>
+      </div>
+      <el-button type="primary" @click="refreshData">
+        <el-icon><Refresh /></el-icon>
+        刷新
+      </el-button>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="search-bar">
+      <el-form :model="searchForm" inline>
+        <el-form-item label="用户名">
+          <el-input
+            v-model="searchForm.username"
+            placeholder="请输入用户名"
+            clearable
+            style="width: 200px"
           />
-        </div>
-      </el-card>
+        </el-form-item>
+        <el-form-item label="角色">
+          <el-select
+            v-model="searchForm.role"
+            placeholder="请选择角色"
+            clearable
+            style="width: 120px"
+          >
+            <el-option label="管理员" value="admin" />
+            <el-option label="普通用户" value="user" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <!-- 用户表格 -->
+    <div class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="userList"
+        style="width: 100%"
+        stripe
+      >
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="username" label="用户名" />
+        <el-table-column prop="email" label="邮箱" />
+        <el-table-column prop="role" label="角色" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.role === 'admin' ? 'danger' : 'primary'" size="small">
+              {{ row.role === 'admin' ? '管理员' : '普通用户' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="enabled" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.enabled ? 'success' : 'danger'" size="small">
+              {{ row.enabled ? '正常' : '禁用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="注册时间" width="180">
+          <template #default="{ row }">
+            {{ formatDate(row.createTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleView(row)"
+              :loading="viewLoading === row.id"
+            >
+              查看
+            </el-button>
+            <el-button
+              :type="row.enabled ? 'danger' : 'success'"
+              size="small"
+              @click="handleToggleStatus(row)"
+              :loading="toggleLoading === row.id"
+            >
+              {{ row.enabled ? '禁用' : '启用' }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.size"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="pagination.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -145,11 +142,11 @@ const fetchUserList = async () => {
   loading.value = true
   try {
     const response = await getUserList({
-      current: pagination.page, // 使用current参数，从1开始
+      current: pagination.page,
       size: pagination.size,
       ...searchForm
     })
-    
+
     if (response.code === 200) {
       userList.value = response.data.records || []
       pagination.total = response.data.total || 0
@@ -166,10 +163,6 @@ const fetchUserList = async () => {
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
-}
-
-const goBack = () => {
-  router.back()
 }
 
 const refreshData = () => {
@@ -245,7 +238,7 @@ const handleToggleStatus = async (user: User) => {
         type: 'warning'
       }
     )
-    
+
     toggleLoading.value = user.id
     const response = await toggleUserStatus(user.id)
     if (response.code === 200) {
@@ -266,31 +259,55 @@ const handleToggleStatus = async (user: User) => {
 </script>
 
 <style scoped>
-.users-container {
-  padding: 20px;
-  background-color: #f5f5f5;
-  min-height: 100vh;
+.users-page {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.users-content {
-  margin-top: 20px;
-}
-
-.card-header {
+.page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin: 0 0 0.25rem 0;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--neutral-500);
+  margin: 0;
 }
 
 .search-bar {
-  margin-bottom: 20px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+  margin-bottom: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.table-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .pagination-container {
-  margin-top: 20px;
-  text-align: right;
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

@@ -49,9 +49,6 @@
       
       <div class="action-grid">
         <div class="action-card primary surface-interactive" @click="goToFiles">
-          <div class="card-background">
-            <div class="card-pattern"></div>
-          </div>
           <div class="card-content">
             <div class="card-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -232,29 +229,12 @@ const goToFiles = () => {
   border-radius: var(--radius-xl);
   padding: 2.5rem;
   background: var(--bg-primary);
-  position: relative;
-  overflow: hidden;
-}
-
-.welcome-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(135deg, var(--accent-100) 0%, var(--accent-50) 100%);
-  border-radius: 50%;
-  transform: translate(50%, -50%);
-  opacity: 0.5;
 }
 
 .welcome-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
-  z-index: 1;
 }
 
 .welcome-text {
@@ -370,33 +350,9 @@ const goToFiles = () => {
   border-color: var(--accent-200);
 }
 
-.card-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.action-card.primary .card-background {
-  background: linear-gradient(135deg, var(--accent-50) 0%, var(--accent-100) 100%);
-}
-
-.action-card:hover .card-background {
-  opacity: 1;
-}
-
-.card-pattern {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100px;
-  height: 100px;
-  background: radial-gradient(circle, var(--accent-200) 1px, transparent 1px);
-  background-size: 10px 10px;
-  opacity: 0.3;
+.action-card:hover {
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
 }
 
 .card-content {
@@ -414,7 +370,6 @@ const goToFiles = () => {
   align-items: center;
   justify-content: center;
   margin-bottom: 1.5rem;
-  transition: all 0.3s ease;
 }
 
 .action-card.primary .card-icon {
@@ -422,8 +377,7 @@ const goToFiles = () => {
 }
 
 .action-card:hover .card-icon {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  background: var(--accent-100);
 }
 
 .card-icon svg {
@@ -453,8 +407,8 @@ const goToFiles = () => {
 .card-arrow {
   width: 1.5rem;
   height: 1.5rem;
-  opacity: 0;
-  transition: all 0.3s ease;
+  opacity: 0.4;
+  transition: all 0.2s ease;
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -463,7 +417,6 @@ const goToFiles = () => {
 
 .action-card:hover .card-arrow {
   opacity: 1;
-  transform: translateX(4px);
 }
 
 .card-arrow svg {

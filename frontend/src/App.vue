@@ -5,15 +5,15 @@
 </template>
 
 <script setup lang="ts">
-// 这里可以添加全局逻辑
+// 全局逻辑
 </script>
 
 <style scoped>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
+  color: var(--neutral-800);
   width: 100%;
   min-height: 100vh;
 }

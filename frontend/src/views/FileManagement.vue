@@ -12,6 +12,25 @@
           </div>
         </div>
         <div class="header-actions">
+          <el-dropdown @command="handleDataTransfer" class="data-transfer-dropdown">
+            <el-button class="transfer-btn">
+              <el-icon><Sort /></el-icon>
+              数据管理
+              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="export">
+                  <el-icon><Upload /></el-icon>
+                  导出数据
+                </el-dropdown-item>
+                <el-dropdown-item command="import">
+                  <el-icon><Download /></el-icon>
+                  导入数据
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-button type="primary" @click="showUploadDialog = true" class="upload-btn">
             <el-icon><Upload /></el-icon>
             上传文档
@@ -332,6 +351,18 @@
       :availableTags="availableTags"
       @success="handleFileEditSuccess"
     />
+
+    <!-- 数据导出对话框 -->
+    <DataExportDialog
+      v-model="showExportDialog"
+      :categories="categoryOptions"
+    />
+
+    <!-- 数据导入对话框 -->
+    <DataImportDialog
+      v-model="showImportDialog"
+      @success="handleImportSuccess"
+    />
   </div>
 </template>
 
@@ -340,7 +371,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, Edit, Delete, Upload, Refresh, Search, Filter,
-  View, Download, MoreFilled, RefreshLeft, ArrowDown
+  View, Download, MoreFilled, RefreshLeft, ArrowDown, Sort
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { getFileList, getCategories, deleteFile, createCategory, deleteCategory as deleteCategoryApi, updateCategory, getAllTags } from '@/api/file'
@@ -349,6 +380,8 @@ import FileUploadDialog from '@/components/FileUploadDialog.vue'
 import CategoryDialog from '@/components/CategoryDialog.vue'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import FileEditDialog from '@/components/FileEditDialog.vue'
+import DataExportDialog from '@/components/DataExportDialog.vue'
+import DataImportDialog from '@/components/DataImportDialog.vue'
 
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
@@ -368,6 +401,8 @@ const showCategoryDialog = ref(false)
 const showPreviewDialog = ref(false)
 const showAdvancedSearch = ref(false)
 const showFileEditDialog = ref(false)
+const showExportDialog = ref(false)
+const showImportDialog = ref(false)
 
 // 当前编辑的分类和文件
 const currentEditCategory = ref<FileCategory | null>(null)
@@ -568,43 +603,16 @@ const previewFile = (file: PolicyFile) => {
 
 const downloadFile = async (file: PolicyFile) => {
   try {
-    // 使用store中的token来确保认证状态一致
-    const authStore = useAuthStore()
-    const response = await fetch(`/api/files/${file.id}/download`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        ElMessage.error('用户未登录，请重新登录')
-      } else {
-        ElMessage.error('下载失败：' + response.statusText)
-      }
-      return
+    const { openFileWithSystem } = await import('@/api/file')
+    const response = await openFileWithSystem(file.id)
+    if (response.code === 200) {
+      ElMessage.success('文件已打开')
+    } else {
+      ElMessage.error('打开文件失败')
     }
-
-    // 获取文件内容
-    const blob = await response.blob()
-    
-    // 创建下载链接
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = file.originalName
-    document.body.appendChild(link)
-    link.click()
-    
-    // 清理
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    
-    ElMessage.success('文件下载成功')
   } catch (error) {
-    console.error('下载失败:', error)
-    ElMessage.error('下载失败，请稍后重试')
+    console.error('打开文件失败:', error)
+    ElMessage.error('打开文件失败，请稍后重试')
   }
 }
 
@@ -639,14 +647,19 @@ const handleDeleteFile = async (file: PolicyFile) => {
         type: 'warning'
       }
     )
-    
+  } catch {
+    // 用户取消操作
+    return
+  }
+
+  try {
     const response = await deleteFile(file.id)
     if (response.code === 200) {
       ElMessage.success('文件删除成功')
       loadFileList()
     }
-  } catch (error) {
-    // 用户取消操作
+  } catch (error: any) {
+    ElMessage.error(error.message || '删除失败')
   }
 }
 
@@ -664,6 +677,20 @@ const handleCategorySuccess = () => {
 const handleFileEditSuccess = () => {
   showFileEditDialog.value = false
   currentEditFile.value = null
+  loadFileList()
+}
+
+const handleDataTransfer = (command: string) => {
+  if (command === 'export') {
+    showExportDialog.value = true
+  } else if (command === 'import') {
+    showImportDialog.value = true
+  }
+}
+
+const handleImportSuccess = () => {
+  loadCategories()
+  loadTags()
   loadFileList()
 }
 
@@ -876,7 +903,7 @@ const handleBatchAction = (command: string) => {
 }
 
 .upload-btn {
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--primary-600) 100%);
+  background: var(--accent-600);
   border: none;
   font-weight: 600;
   padding: 0.75rem 1.5rem;
@@ -1073,16 +1100,12 @@ const handleBatchAction = (command: string) => {
 }
 
 .category-tree :deep(.el-tree-node__content:hover) {
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--accent-50) 100%) !important;
-  transform: translateX(2px);
-  box-shadow: var(--shadow-sm);
+  background: var(--bg-secondary) !important;
 }
 
 .category-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: linear-gradient(135deg, var(--accent-100) 0%, var(--primary-100) 100%) !important;
+  background: var(--accent-50) !important;
   border: 1px solid var(--accent-200);
-  transform: translateX(4px);
-  box-shadow: var(--shadow-md);
 }
 
 .category-tree :deep(.el-tree-node__expand-icon) {
@@ -1134,9 +1157,9 @@ const handleBatchAction = (command: string) => {
   transform: translateY(-50%);
   width: 3px;
   height: 0;
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--primary-600) 100%);
+  background: var(--accent-600);
   border-radius: 0 2px 2px 0;
-  transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: height 0.2s ease;
 }
 
 .category-node:hover::before {
@@ -1144,10 +1167,8 @@ const handleBatchAction = (command: string) => {
 }
 
 .category-node:hover {
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(168, 85, 247, 0.05) 100%);
-  border-color: var(--accent-100);
-  transform: translateX(2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
 }
 
 .category-name {
@@ -1167,7 +1188,6 @@ const handleBatchAction = (command: string) => {
 
 .category-node:hover .category-name {
   color: var(--neutral-800);
-  transform: translateX(2px);
 }
 
 .category-tree :deep(.el-tree-node.is-current) .category-name {
@@ -1178,51 +1198,29 @@ const handleBatchAction = (command: string) => {
 .category-count {
   font-size: 0.75rem;
   color: var(--accent-600);
-  background: linear-gradient(135deg, var(--accent-50) 0%, var(--primary-50) 100%);
+  background: var(--accent-50);
   padding: 0.375rem 0.75rem;
   border-radius: var(--radius-full);
   min-width: 2.5rem;
   text-align: center;
   margin-right: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   height: 28px;
   border: 1px solid var(--accent-200);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.category-count::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s;
 }
 
 .category-node:hover .category-count {
-  background: linear-gradient(135deg, var(--accent-100) 0%, var(--primary-100) 100%);
-  border-color: var(--accent-300);
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2);
-}
-
-.category-node:hover .category-count::before {
-  left: 100%;
+  background: var(--accent-100);
 }
 
 .category-tree :deep(.el-tree-node.is-current) .category-count {
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--primary-600) 100%);
+  background: var(--accent-600);
   color: white;
   border-color: var(--accent-700);
-  box-shadow: var(--shadow-colored);
 }
 
 .category-actions {
@@ -1261,15 +1259,11 @@ const handleBatchAction = (command: string) => {
   background: var(--accent-50);
   border-color: var(--accent-200);
   color: var(--accent-600);
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
 }
 
 .category-actions .el-button:nth-child(2):hover {
   background: var(--error-light);
-  border-color: var(--error-200);
   color: var(--error);
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
 }
 
 .category-actions .el-button .el-icon {
@@ -1799,7 +1793,7 @@ const handleBatchAction = (command: string) => {
 .file-icon {
   width: 2.5rem;
   height: 2.5rem;
-  background: linear-gradient(135deg, var(--accent-100) 0%, var(--primary-100) 100%);
+  background: var(--accent-50);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -1836,7 +1830,7 @@ const handleBatchAction = (command: string) => {
   position: absolute;
   top: -0.25rem;
   right: -0.25rem;
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--primary-600) 100%);
+  background: var(--accent-600);
   color: white;
   font-size: 0.625rem;
   font-weight: 700;
@@ -1952,7 +1946,7 @@ const handleBatchAction = (command: string) => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, var(--accent-50) 0%, var(--primary-50) 100%);
+  background: var(--accent-50);
   border: 1px solid var(--accent-200);
   border-radius: var(--radius-lg);
   padding: 0.5rem 0.75rem;
@@ -2111,8 +2105,7 @@ const handleBatchAction = (command: string) => {
 }
 
 .action-btn.preview:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-colored);
+  box-shadow: var(--shadow-md);
 }
 
 .action-btn.download {

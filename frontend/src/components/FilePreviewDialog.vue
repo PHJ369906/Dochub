@@ -34,70 +34,63 @@
       <!-- 预览内容 -->
       <div class="preview-content" v-loading="previewLoading">
         <!-- 图片预览 -->
-        <div v-if="previewType === 'image'" class="image-preview">
+        <div v-if="previewType === 'image' && previewData" class="image-preview">
           <el-image
-            :src="previewUrl"
+            :src="`data:${previewData.mimeType};base64,${previewData.content}`"
             :alt="file.title"
             fit="contain"
             style="width: 100%; height: 500px;"
-            :preview-src-list="[previewUrl]"
+            :preview-src-list="[`data:${previewData.mimeType};base64,${previewData.content}`]"
           />
         </div>
 
+        <!-- PDF预览 -->
+        <div v-else-if="previewType === 'pdf' && previewData" class="pdf-preview">
+          <iframe
+            :src="`data:application/pdf;base64,${previewData.content}`"
+            style="width: 100%; height: 600px; border: none;"
+          />
+        </div>
+
+        <!-- 文本预览 -->
+        <div v-else-if="previewType === 'text' && previewData" class="text-preview">
+          <pre>{{ previewData.content }}</pre>
+        </div>
+
+        <!-- HTML 预览（Word/Excel 文档） -->
+        <div v-else-if="previewType === 'html' && previewData" class="html-preview">
+          <div v-html="previewData.content" class="html-content"></div>
+        </div>
+
         <!-- 视频预览 -->
-        <div v-else-if="previewType === 'video'" class="video-preview">
-          <video
-            :src="previewUrl"
-            controls
-            style="width: 100%; height: 500px;"
-          >
+        <div v-else-if="previewType === 'video' && previewData" class="video-preview">
+          <video controls preload="metadata" :key="assetUrl">
+            <source :src="assetUrl" :type="previewData.mimeType" />
             您的浏览器不支持视频播放
           </video>
         </div>
 
         <!-- 音频预览 -->
-        <div v-else-if="previewType === 'audio'" class="audio-preview">
-          <audio
-            :src="previewUrl"
-            controls
-            style="width: 100%;"
-          >
+        <div v-else-if="previewType === 'audio' && previewData" class="audio-preview">
+          <audio controls preload="metadata" :key="assetUrl">
+            <source :src="assetUrl" :type="previewData.mimeType" />
             您的浏览器不支持音频播放
           </audio>
         </div>
 
-        <!-- PDF预览 -->
-        <div v-else-if="previewType === 'pdf'" class="pdf-preview">
-          <iframe
-            :src="pdfPreviewUrl"
-            style="width: 100%; height: 600px; border: none;"
-          />
-        </div>
-
-        <!-- Office文档预览 -->
-        <div v-else-if="previewType === 'office'" class="office-preview">
-          <!-- 内嵌预览框架 -->
-          <iframe
-            :src="onlinePreviewUrl"
-            style="width: 100%; height: 600px; border: none;"
-            @load="iframeLoaded"
-          />
-        </div>
-
-        <!-- 文本预览 -->
-        <div v-else-if="previewType === 'text'" class="text-preview">
-          <pre v-if="textContent">{{ textContent }}</pre>
-          <div v-else class="no-preview">
-            <el-icon class="no-preview-icon"><Document /></el-icon>
-            <p>文本内容加载失败</p>
-          </div>
+        <!-- Office/其他 - 用系统应用打开 -->
+        <div v-else-if="previewType === 'office' || previewType === 'external'" class="no-preview">
+          <el-icon class="no-preview-icon"><Document /></el-icon>
+          <p>{{ previewType === 'office' ? 'Office 文档请使用系统默认应用打开' : '该文件类型暂不支持在线预览' }}</p>
+          <el-button type="primary" @click="openWithSystemApp">用系统应用打开</el-button>
+          <el-button @click="openFileFolder">打开文件所在目录</el-button>
         </div>
 
         <!-- 不支持预览 -->
-        <div v-else class="no-preview">
+        <div v-else-if="!previewLoading" class="no-preview">
           <el-icon class="no-preview-icon"><Document /></el-icon>
           <p>该文件类型暂不支持在线预览</p>
-          <el-button type="primary" @click="downloadFile">下载文件</el-button>
+          <el-button type="primary" @click="openWithSystemApp">用系统应用打开</el-button>
         </div>
       </div>
     </div>
@@ -113,16 +106,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Document, Download, View } from '@element-plus/icons-vue'
-import { useAuthStore } from '@/stores/auth'
-import {
-  getFilePreview,
-  getPdfPagePreview,
-  getOfficePreview,
-  getImagePreview,
-  getTextPreview
-} from '@/api/file'
-import type { PolicyFile, FilePreviewInfo } from '@/types/file'
+import { Document } from '@element-plus/icons-vue'
+import { open as shellOpen } from '@tauri-apps/plugin-shell'
+import { convertFileSrc } from '@tauri-apps/api/core'
+import { previewFile as apiPreviewFile, getFilePath, openFileWithSystem, openFileFolder as apiOpenFileFolder } from '@/api/file'
+import type { PolicyFile } from '@/types/file'
 
 interface Props {
   modelValue: boolean
@@ -137,9 +125,8 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const previewLoading = ref(false)
-const previewInfo = ref<FilePreviewInfo | null>(null)
-const textContent = ref('')
-const onlinePreviewUrl = ref('')
+const previewData = ref<{ previewType: string; content: string; mimeType: string } | null>(null)
+const filePath = ref('')
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -147,135 +134,56 @@ const dialogVisible = computed({
 })
 
 const previewType = computed(() => {
-  if (!props.file) return 'unknown'
-
-  const fileType = props.file.fileType.toLowerCase()
-
-  if (fileType === 'pdf') return 'pdf'
-  if (['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(fileType)) return 'office'
-  if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(fileType)) return 'image'
-  if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'].includes(fileType)) return 'video'
-  if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'].includes(fileType)) return 'audio'
-  if (['txt', 'md', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts'].includes(fileType)) return 'text'
-
-  return 'unknown'
+  return previewData.value?.previewType || 'unknown'
 })
 
-const previewUrl = computed(() => {
-  if (!props.file) return ''
-
-  switch (previewType.value) {
-    case 'image':
-      return getImagePreview(props.file.id)
-    case 'video':
-    case 'audio':
-      return `/api/files/${props.file.id}/preview`
-    case 'text':
-      return getTextPreview(props.file.id, false)
-    default:
-      return `/api/files/${props.file.id}/preview`
+const assetUrl = computed(() => {
+  if ((previewType.value === 'video' || previewType.value === 'audio') && previewData.value?.content) {
+    return convertFileSrc(previewData.value.content)
   }
+  return ''
 })
 
-const officePreviewUrl = computed(() => {
-  if (!props.file || previewType.value !== 'office') return ''
-  return getOfficePreview(props.file.id)
-})
-
-const pdfPreviewUrl = computed(() => {
-  if (!props.file || previewType.value !== 'pdf') return ''
-  return getPdfPagePreview(props.file.id, 0, 150)
-})
-
-const loadPreviewInfo = async () => {
+const loadPreview = async () => {
   if (!props.file) return
 
   previewLoading.value = true
   try {
-    const response = await getFilePreview(props.file.id)
+    const response = await apiPreviewFile(props.file.id)
     if (response.code === 200) {
-      previewInfo.value = response.data
+      previewData.value = response.data
+    }
 
-      // 根据文件类型加载相应内容
-      if (previewType.value === 'text') {
-        await loadTextContent()
-      } else if (previewType.value === 'office') {
-        // Office文档自动加载预览
-        onlinePreviewUrl.value = `/api/preview/onlinePreview?url=${props.file.id}`
-      }
-    } else {
-      ElMessage.error(response.message || '加载预览信息失败')
+    // 获取文件路径用于系统打开
+    const pathResp = await getFilePath(props.file.id)
+    if (pathResp.code === 200) {
+      filePath.value = pathResp.data
     }
   } catch (error) {
-    console.error('加载预览信息失败:', error)
-    ElMessage.error('加载预览信息失败')
+    console.error('加载预览失败:', error)
   } finally {
     previewLoading.value = false
   }
 }
 
-const loadTextContent = async () => {
-  if (!props.file) return
-
-  try {
-    const response = await fetch(getTextPreview(props.file.id, false))
-    if (response.ok) {
-      textContent.value = await response.text()
-    }
-  } catch (error) {
-    console.error('加载文本内容失败:', error)
-  }
-}
-
-
-const downloadFile = async () => {
+const openWithSystemApp = async () => {
   if (props.file) {
     try {
-      // 使用store中的token来确保认证状态一致
-      const authStore = useAuthStore()
-      const response = await fetch(`/api/files/${props.file.id}/download`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`
-        }
-      })
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          ElMessage.error('用户未登录，请重新登录')
-        } else {
-          ElMessage.error('下载失败：' + response.statusText)
-        }
-        return
-      }
-
-      // 获取文件内容
-      const blob = await response.blob()
-      
-      // 创建下载链接
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = props.file.originalName
-      document.body.appendChild(link)
-      link.click()
-      
-      // 清理
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      
-      ElMessage.success('文件下载成功')
+      await openFileWithSystem(props.file.id)
     } catch (error) {
-      console.error('下载失败:', error)
-      ElMessage.error('下载失败，请稍后重试')
+      ElMessage.error('无法打开文件')
     }
   }
 }
 
-
-const iframeLoaded = () => {
-  // iframe加载完成
-  console.log('预览加载完成')
+const openFileFolder = async () => {
+  if (props.file) {
+    try {
+      await apiOpenFileFolder(props.file.id)
+    } catch (error) {
+      ElMessage.error('无法打开目录')
+    }
+  }
 }
 
 const handleClose = () => {
@@ -283,37 +191,28 @@ const handleClose = () => {
 }
 
 const formatFileSize = (size: number) => {
-  if (size < 1024) {
-    return size + ' B'
-  } else if (size < 1024 * 1024) {
-    return (size / 1024).toFixed(1) + ' KB'
-  } else if (size < 1024 * 1024 * 1024) {
-    return (size / (1024 * 1024)).toFixed(1) + ' MB'
-  } else {
-    return (size / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
-  }
+  if (size < 1024) return size + ' B'
+  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'
+  if (size < 1024 * 1024 * 1024) return (size / (1024 * 1024)).toFixed(1) + ' MB'
+  return (size / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
 }
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
 }
 
-// 监听文件变化
 watch(() => props.file, (newFile) => {
   if (newFile && props.modelValue) {
-    loadPreviewInfo()
+    loadPreview()
   }
 }, { immediate: true })
 
-// 监听对话框显示状态
 watch(dialogVisible, (visible) => {
   if (visible && props.file) {
-    loadPreviewInfo()
+    loadPreview()
   } else {
-    // 重置状态
-    previewInfo.value = null
-    textContent.value = ''
-    onlinePreviewUrl.value = ''
+    previewData.value = null
+    filePath.value = ''
   }
 })
 </script>
@@ -364,9 +263,7 @@ watch(dialogVisible, (visible) => {
   overflow: hidden;
 }
 
-.image-preview,
-.video-preview,
-.audio-preview {
+.image-preview {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -377,34 +274,6 @@ watch(dialogVisible, (visible) => {
   display: flex;
   flex-direction: column;
 }
-
-.pdf-controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e6e6e6;
-}
-
-.page-info {
-  font-weight: 500;
-  color: #606266;
-}
-
-.pdf-content {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  overflow: auto;
-}
-
-.office-preview {
-  height: 600px;
-}
-
 
 .text-preview {
   padding: 20px;
@@ -422,6 +291,76 @@ watch(dialogVisible, (visible) => {
   line-height: 1.5;
 }
 
+.html-preview {
+  padding: 20px;
+  max-height: 600px;
+  overflow-y: auto;
+  background-color: #fff;
+}
+
+.html-content {
+  max-width: 100%;
+}
+
+.html-content :deep(p) {
+  margin: 0 0 8px 0;
+  line-height: 1.8;
+}
+
+.html-content :deep(h1),
+.html-content :deep(h2),
+.html-content :deep(h3),
+.html-content :deep(h4),
+.html-content :deep(h5),
+.html-content :deep(h6) {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.html-content :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.html-content :deep(td),
+.html-content :deep(th) {
+  border: 1px solid #ccc;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.html-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.video-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background-color: #000;
+}
+
+.video-preview video {
+  max-width: 100%;
+  max-height: 600px;
+}
+
+.audio-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.audio-preview audio {
+  width: 80%;
+  max-width: 500px;
+}
+
 .no-preview {
   display: flex;
   flex-direction: column;
@@ -429,6 +368,7 @@ watch(dialogVisible, (visible) => {
   align-items: center;
   height: 400px;
   color: #909399;
+  gap: 16px;
 }
 
 .no-preview-icon {
