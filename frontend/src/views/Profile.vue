@@ -1,73 +1,79 @@
 <template>
-  <div class="profile-container">
-    <el-page-header @back="goBack" content="个人资料" />
-    
+  <div class="profile-page fade-in">
+    <div class="page-header">
+      <h1 class="page-title">个人资料</h1>
+      <p class="page-subtitle">管理您的账户信息</p>
+    </div>
+
     <div class="profile-content">
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-card class="profile-card">
-            <div class="avatar-section">
-              <el-avatar :size="120" :src="user?.avatar">
-                <User />
-              </el-avatar>
-              <h2>{{ user?.username }}</h2>
-              <el-tag :type="user?.role === 'admin' ? 'danger' : 'primary'">
-                {{ user?.role === 'admin' ? '管理员' : '普通用户' }}
+      <div class="profile-grid">
+        <!-- 左侧头像卡片 -->
+        <div class="avatar-card">
+          <div class="avatar-wrapper">
+            <el-avatar :size="96" :src="user?.avatar">
+              <User />
+            </el-avatar>
+          </div>
+          <h2 class="user-name">{{ user?.username }}</h2>
+          <el-tag :type="user?.role === 'admin' ? 'danger' : 'primary'" size="small">
+            {{ user?.role === 'admin' ? '管理员' : '普通用户' }}
+          </el-tag>
+          <div class="avatar-meta">
+            <div class="meta-item">
+              <span class="meta-label">注册时间</span>
+              <span class="meta-value">{{ formatDate(user?.createTime) }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">账户状态</span>
+              <el-tag :type="user?.enabled ? 'success' : 'danger'" size="small">
+                {{ user?.enabled ? '正常' : '已禁用' }}
               </el-tag>
             </div>
-          </el-card>
-        </el-col>
-        
-        <el-col :span="16">
-          <el-card class="info-card">
-            <template #header>
-              <div class="card-header">
-                <span>基本信息</span>
-                <el-button type="primary" size="small" @click="editMode = !editMode">
-                  {{ editMode ? '取消编辑' : '编辑资料' }}
-                </el-button>
-              </div>
-            </template>
-            
-            <el-form
-              ref="profileFormRef"
-              :model="profileForm"
-              :rules="profileRules"
-              label-width="100px"
-              :disabled="!editMode"
+          </div>
+        </div>
+
+        <!-- 右侧信息表单 -->
+        <div class="info-card">
+          <div class="card-header">
+            <h3>基本信息</h3>
+            <el-button
+              :type="editMode ? 'default' : 'primary'"
+              size="small"
+              @click="editMode = !editMode"
             >
-              <el-form-item label="用户名" prop="username">
-                <el-input v-model="profileForm.username" disabled />
-              </el-form-item>
-              
-              <el-form-item label="邮箱" prop="email">
-                <el-input v-model="profileForm.email" />
-              </el-form-item>
-              
-              <el-form-item label="角色">
-                <el-input :value="user?.role === 'admin' ? '管理员' : '普通用户'" disabled />
-              </el-form-item>
-              
-              <el-form-item label="注册时间">
-                <el-input :value="formatDate(user?.createTime)" disabled />
-              </el-form-item>
-              
-              <el-form-item label="账户状态">
-                <el-tag :type="user?.enabled ? 'success' : 'danger'">
-                  {{ user?.enabled ? '正常' : '已禁用' }}
-                </el-tag>
-              </el-form-item>
-              
-              <el-form-item v-if="editMode">
-                <el-button type="primary" @click="handleSave" :loading="saving">
-                  保存修改
-                </el-button>
-                <el-button @click="handleCancel">取消</el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </el-col>
-      </el-row>
+              {{ editMode ? '取消编辑' : '编辑资料' }}
+            </el-button>
+          </div>
+
+          <el-form
+            ref="profileFormRef"
+            :model="profileForm"
+            :rules="profileRules"
+            label-width="100px"
+            :disabled="!editMode"
+            class="profile-form"
+          >
+            <el-form-item label="用户名" prop="username">
+              <el-input v-model="profileForm.username" disabled />
+            </el-form-item>
+
+            <el-form-item label="邮箱" prop="email">
+              <el-input v-model="profileForm.email" />
+            </el-form-item>
+
+            <el-form-item label="角色">
+              <el-input :value="user?.role === 'admin' ? '管理员' : '普通用户'" disabled />
+            </el-form-item>
+
+            <el-form-item v-if="editMode" class="form-actions">
+              <el-button type="primary" @click="handleSave" :loading="saving">
+                保存修改
+              </el-button>
+              <el-button @click="handleCancel">取消</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -112,13 +118,9 @@ const formatDate = (dateString?: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
 }
 
-const goBack = () => {
-  router.back()
-}
-
 const handleSave = async () => {
   if (!profileFormRef.value) return
-  
+
   await profileFormRef.value.validate(async (valid) => {
     if (valid) {
       saving.value = true
@@ -147,36 +149,117 @@ const handleCancel = () => {
 </script>
 
 <style scoped>
-.profile-container {
-  padding: 20px;
-  background-color: #f5f5f5;
-  min-height: 100vh;
+.profile-page {
+  max-width: 960px;
+  margin: 0 auto;
 }
 
-.profile-content {
-  margin-top: 20px;
+.page-header {
+  margin-bottom: 2rem;
 }
 
-.profile-card {
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin: 0 0 0.25rem 0;
+}
+
+.page-subtitle {
+  font-size: 0.875rem;
+  color: var(--neutral-500);
+  margin: 0;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.avatar-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
   text-align: center;
+  box-shadow: var(--shadow-sm);
 }
 
-.avatar-section {
-  padding: 20px;
+.avatar-wrapper {
+  margin-bottom: 1rem;
 }
 
-.avatar-section h2 {
-  margin: 16px 0 8px 0;
-  color: #303133;
+.user-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--neutral-900);
+  margin: 0 0 0.5rem 0;
+}
+
+.avatar-meta {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-light);
+  text-align: left;
+}
+
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.meta-label {
+  font-size: 0.813rem;
+  color: var(--neutral-500);
+}
+
+.meta-value {
+  font-size: 0.813rem;
+  color: var(--neutral-700);
+  font-weight: 500;
 }
 
 .info-card {
-  height: fit-content;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.card-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--neutral-900);
+  margin: 0;
+}
+
+.profile-form .el-form-item {
+  margin-bottom: 1.25rem;
+}
+
+.form-actions {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+}
+
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

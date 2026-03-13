@@ -197,7 +197,7 @@ const fillAccount = (username: string, password: string) => {
   width: 100%;
   background: var(--bg-primary);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-2xl);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
   min-height: 600px;
   border: 1px solid var(--border-light);
@@ -213,17 +213,6 @@ const fillAccount = (username: string, password: string) => {
   color: white;
   position: relative;
   overflow: hidden;
-}
-
-.brand-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.05)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.05)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.03)"/><circle cx="20" cy="80" r="0.5" fill="rgba(255,255,255,0.03)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-  z-index: 0;
 }
 
 .brand-content {
@@ -356,7 +345,7 @@ const fillAccount = (username: string, password: string) => {
 
 .form-input :deep(.el-input__wrapper.is-focus) {
   border-color: var(--accent-500);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .login-button {
@@ -366,15 +355,14 @@ const fillAccount = (username: string, password: string) => {
   font-weight: 600;
   border-radius: var(--radius-lg);
   margin-top: 0.5rem;
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-700) 100%);
+  background: var(--accent-600);
   border: none;
   transition: all 0.2s ease;
 }
 
 .login-button:hover {
-  background: linear-gradient(135deg, var(--accent-700) 0%, var(--accent-800) 100%);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-lg);
+  background: var(--accent-700);
+  box-shadow: var(--shadow-sm);
 }
 
 /* 表单底部 */

@@ -11,28 +11,24 @@
       :rules="uploadRules"
       label-width="100px"
     >
-      <el-form-item label="选择文件" prop="files" required>
-        <el-upload
-          ref="uploadRef"
-          :file-list="fileList"
-          :auto-upload="false"
-          :multiple="true"
-          :limit="10"
-          :on-change="handleFileChange"
-          :on-remove="handleFileRemove"
-          :before-upload="beforeUpload"
-          drag
-        >
-          <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-          <div class="el-upload__text">
-            将文件拖到此处，或<em>点击上传</em>
-          </div>
-          <template #tip>
-            <div class="el-upload__tip">
-              支持 PDF、Word、Excel、PPT、图片、视频等格式，单个文件不超过100MB
+      <el-form-item label="选择文件" required>
+        <div class="file-select-area">
+          <el-button type="primary" @click="selectFiles">
+            <el-icon><upload-filled /></el-icon>
+            选择文件
+          </el-button>
+          <div v-if="selectedFiles.length > 0" class="selected-files">
+            <div v-for="(file, index) in selectedFiles" :key="index" class="file-item">
+              <span class="file-name">{{ getFileName(file) }}</span>
+              <el-button link size="small" @click="removeFile(index)">
+                <el-icon><Close /></el-icon>
+              </el-button>
             </div>
-          </template>
-        </el-upload>
+          </div>
+          <div v-else class="no-file-tip">
+            支持 PDF、Word、Excel、PPT、图片、视频等格式，单个文件不超过100MB
+          </div>
+        </div>
       </el-form-item>
 
       <el-form-item label="文件标题">
@@ -136,8 +132,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
-import { ElMessage, type FormInstance, type FormRules, type UploadFile, type UploadFiles } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { UploadFilled, Close } from '@element-plus/icons-vue'
+import { open } from '@tauri-apps/plugin-dialog'
 import { uploadFile } from '@/api/file'
 import type { FileCategory, FileUploadForm } from '@/types/file'
 
@@ -155,9 +152,8 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const uploadFormRef = ref<FormInstance>()
-const uploadRef = ref()
 const uploading = ref(false)
-const fileList = ref<UploadFile[]>([])
+const selectedFiles = ref<string[]>([])
 
 const uploadForm = reactive<FileUploadForm & { isPublic: boolean }>({
   title: '',
@@ -171,11 +167,7 @@ const uploadForm = reactive<FileUploadForm & { isPublic: boolean }>({
   isPublic: true
 })
 
-const uploadRules: FormRules = {
-  files: [
-    { required: true, message: '请选择要上传的文件', trigger: 'change' }
-  ]
-}
+const uploadRules: FormRules = {}
 
 const availableTags = ref([
   { label: '政策法规', value: '政策法规' },
@@ -205,7 +197,6 @@ const buildCategoryTree = (categories: FileCategory[]) => {
   const tree: any[] = []
   const map = new Map()
 
-  // 先创建所有节点
   categories.forEach(category => {
     map.set(category.id, {
       id: category.id,
@@ -214,7 +205,6 @@ const buildCategoryTree = (categories: FileCategory[]) => {
     })
   })
 
-  // 构建树形结构
   categories.forEach(category => {
     const node = map.get(category.id)
     if (category.parentId && map.has(category.parentId)) {
@@ -227,80 +217,72 @@ const buildCategoryTree = (categories: FileCategory[]) => {
   return tree
 }
 
-const handleFileChange = (file: UploadFile, files: UploadFiles) => {
-  fileList.value = files
-  
-  // 如果只有一个文件且没有设置标题，使用文件名作为标题
-  if (files.length === 1 && !uploadForm.title) {
-    uploadForm.title = file.name.substring(0, file.name.lastIndexOf('.'))
+const getFileName = (filePath: string) => {
+  return filePath.split('/').pop() || filePath.split('\\').pop() || filePath
+}
+
+const selectFiles = async () => {
+  try {
+    const result = await open({
+      multiple: true,
+      filters: [{
+        name: '文档',
+        extensions: [
+          'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+          'txt', 'md', 'html', 'htm', 'xml', 'json',
+          'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+          'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv',
+          'mp3', 'wav', 'flac', 'aac', 'ogg', 'zip', 'rar', '7z'
+        ]
+      }]
+    })
+
+    if (result) {
+      const paths = Array.isArray(result) ? result : [result]
+      selectedFiles.value = paths.map(p => typeof p === 'string' ? p : p.path)
+
+      // 如果只有一个文件且没有设置标题，使用文件名作为标题
+      if (selectedFiles.value.length === 1 && !uploadForm.title) {
+        const fileName = getFileName(selectedFiles.value[0])
+        uploadForm.title = fileName.substring(0, fileName.lastIndexOf('.')) || fileName
+      }
+    }
+  } catch (error) {
+    console.error('选择文件失败:', error)
   }
 }
 
-const handleFileRemove = (file: UploadFile, files: UploadFiles) => {
-  fileList.value = files
-}
-
-const beforeUpload = (file: File) => {
-  const allowedTypes = [
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-    'txt', 'md', 'html', 'htm', 'xml', 'json',
-    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
-    'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv',
-    'mp3', 'wav', 'flac', 'aac', 'ogg', 'zip', 'rar', '7z'
-  ]
-  
-  const fileType = file.name.split('.').pop()?.toLowerCase()
-  if (!fileType || !allowedTypes.includes(fileType)) {
-    ElMessage.error('不支持的文件类型')
-    return false
-  }
-  
-  const maxSize = 100 * 1024 * 1024 // 100MB
-  if (file.size > maxSize) {
-    ElMessage.error('文件大小不能超过100MB')
-    return false
-  }
-  
-  return true
+const removeFile = (index: number) => {
+  selectedFiles.value.splice(index, 1)
 }
 
 const handleUpload = async () => {
-  if (!uploadFormRef.value) return
-  
-  if (fileList.value.length === 0) {
+  if (selectedFiles.value.length === 0) {
     ElMessage.error('请选择要上传的文件')
     return
   }
-  
+
   uploading.value = true
-  
+
   try {
-    // 逐个上传文件
-    for (const fileItem of fileList.value) {
-      if (fileItem.raw) {
-        const formData = new FormData()
-        formData.append('file', fileItem.raw)
-        
-        // 添加其他表单数据
-        if (uploadForm.title) formData.append('title', uploadForm.title)
-        if (uploadForm.description) formData.append('description', uploadForm.description)
-        if (uploadForm.categoryId) formData.append('categoryId', uploadForm.categoryId.toString())
-        if (uploadForm.tags && uploadForm.tags.length > 0) {
-          uploadForm.tags.forEach(tag => formData.append('tags', tag))
-        }
-        if (uploadForm.documentNumber) formData.append('documentNumber', uploadForm.documentNumber)
-        if (uploadForm.issueDate) formData.append('issueDate', uploadForm.issueDate)
-        if (uploadForm.effectiveDate) formData.append('effectiveDate', uploadForm.effectiveDate)
-        if (uploadForm.issuingAuthority) formData.append('issuingAuthority', uploadForm.issuingAuthority)
-        formData.append('isPublic', uploadForm.isPublic.toString())
-        
-        const response = await uploadFile(formData)
-        if (response.code !== 200) {
-          throw new Error(response.message || '上传失败')
-        }
+    for (const filePath of selectedFiles.value) {
+      const response = await uploadFile({
+        filePath,
+        title: uploadForm.title || undefined,
+        description: uploadForm.description || undefined,
+        categoryId: uploadForm.categoryId,
+        tags: uploadForm.tags && uploadForm.tags.length > 0 ? uploadForm.tags : undefined,
+        documentNumber: uploadForm.documentNumber || undefined,
+        issueDate: uploadForm.issueDate || undefined,
+        effectiveDate: uploadForm.effectiveDate || undefined,
+        issuingAuthority: uploadForm.issuingAuthority || undefined,
+        isPublic: uploadForm.isPublic,
+      })
+      if (response.code !== 200) {
+        throw new Error(response.message || '上传失败')
       }
     }
-    
+
     ElMessage.success('文件上传成功')
     emit('success')
     resetForm()
@@ -330,11 +312,9 @@ const resetForm = () => {
     issuingAuthority: '',
     isPublic: true
   })
-  fileList.value = []
-  uploadRef.value?.clearFiles()
+  selectedFiles.value = []
 }
 
-// 监听对话框显示状态
 watch(dialogVisible, (visible) => {
   if (!visible) {
     resetForm()
@@ -347,7 +327,39 @@ watch(dialogVisible, (visible) => {
   text-align: right;
 }
 
-:deep(.el-upload-dragger) {
+.file-select-area {
   width: 100%;
+}
+
+.selected-files {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+
+.file-name {
+  font-size: 14px;
+  color: var(--neutral-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.no-file-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--neutral-500);
 }
 </style>

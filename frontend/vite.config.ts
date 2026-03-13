@@ -24,14 +24,11 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  // Tauri 使用固定端口以便开发时连接
   server: {
     port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        // 保持 /api 前缀，不进行路径重写
-      },
-    },
+    strictPort: true,
   },
+  // 清除 env 前缀以便 Tauri 环境变量生效
+  envPrefix: ['VITE_', 'TAURI_'],
 })

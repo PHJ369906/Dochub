@@ -94,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, nextTick } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { updateFile } from '@/api/file'
 import type { PolicyFile, FileCategory } from '@/types/file'
@@ -237,46 +237,53 @@ const resetForm = () => {
 
 // 监听编辑文件变化，自动填充表单
 watch(() => props.editFile, (newFile) => {
-  if (newFile) {
-    Object.assign(fileForm, {
-      title: newFile.title || '',
-      categoryId: newFile.categoryId || undefined,
-      issuingAuthority: newFile.issuingAuthority || '',
-      description: newFile.description || '',
-      tags: newFile.tags ? newFile.tags.split(',').filter(Boolean) : [],
-      isPublic: newFile.isPublic !== false
+  if (newFile && props.modelValue) {
+    nextTick(() => {
+      Object.assign(fileForm, {
+        title: newFile.title || '',
+        categoryId: newFile.categoryId || undefined,
+        issuingAuthority: newFile.issuingAuthority || '',
+        description: newFile.description || '',
+        tags: newFile.tags ? newFile.tags.map((t: any) => typeof t === 'string' ? t : t.name) : [],
+        isPublic: newFile.isPublic !== false
+      })
     })
-  } else {
+  } else if (!newFile) {
     resetForm()
   }
-}, { immediate: true })
+})
+
+// 监听对话框打开，填充表单
+watch(() => props.modelValue, (visible) => {
+  if (visible && props.editFile) {
+    nextTick(() => {
+      Object.assign(fileForm, {
+        title: props.editFile!.title || '',
+        categoryId: props.editFile!.categoryId || undefined,
+        issuingAuthority: props.editFile!.issuingAuthority || '',
+        description: props.editFile!.description || '',
+        tags: props.editFile!.tags ? props.editFile!.tags.map((t: any) => typeof t === 'string' ? t : t.name) : [],
+        isPublic: props.editFile!.isPublic !== false
+      })
+    })
+  }
+})
 </script>
 
 <style scoped>
-.file-edit-dialog :deep(.el-dialog) {
-  border-radius: 12px;
-}
-
 .file-edit-form {
   padding: 0 8px;
 }
 
 .file-edit-form .el-form-item {
-  margin-bottom: 24px;
-}
-
-.file-edit-form .el-form-item__label {
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+  margin-bottom: 20px;
 }
 
 .dialog-footer {
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
   padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-light);
-}
-
-.dialog-footer .el-button {
-  margin-left: 12px;
+  border-top: 1px solid var(--border-light);
 }
 </style>

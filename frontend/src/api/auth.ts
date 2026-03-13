@@ -1,37 +1,49 @@
-import request from './request'
+import { tauriInvoke } from './request'
 import type { LoginForm, RegisterForm } from '@/types/auth'
 
-// 登录
+// 登录（不需要 token）
 export const login = (data: LoginForm) => {
-  return request.post('/auth/login', data)
+  return tauriInvoke('login', {
+    username: data.username,
+    password: data.password,
+  })
 }
 
-// 注册
+// 注册（不需要 token）
 export const register = (data: RegisterForm) => {
-  return request.post('/auth/register', data)
+  return tauriInvoke('register', {
+    username: data.username,
+    password: data.password,
+    email: data.email || null,
+  })
 }
 
 // 登出
 export const logout = () => {
-  return request.post('/auth/logout')
+  return tauriInvoke('logout', {})
 }
 
 // 获取用户信息
 export const getUserInfo = () => {
-  return request.get('/auth/userinfo')
+  return tauriInvoke('get_current_user', {})
 }
 
 // 获取用户列表（管理员）
 export const getUserList = (params: any) => {
-  return request.get('/auth/users', { params })
+  return tauriInvoke('get_user_list', {
+    current: params.current,
+    size: params.size,
+    username: params.username || null,
+    role: params.role || null,
+  })
 }
 
 // 获取用户详情（管理员）
 export const getUserDetail = (id: number) => {
-  return request.get(`/auth/users/${id}`)
+  return tauriInvoke('get_user_detail', { id })
 }
 
 // 切换用户状态（管理员）
 export const toggleUserStatus = (id: number) => {
-  return request.put(`/auth/users/${id}/toggle-status`)
+  return tauriInvoke('toggle_user_status', { id })
 }

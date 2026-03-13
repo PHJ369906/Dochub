@@ -225,6 +225,8 @@ watch(() => props.editCategory, (newCategory) => {
 
 <style scoped>
 .dialog-footer {
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 </style>

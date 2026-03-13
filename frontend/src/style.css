@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 现代化设计系统 2024 */
+/* 简约白净设计系统 — Apple/Linear 风格 */
 :root {
   /* 主色系 - 现代深蓝色调 */
   --primary-50: #f0f9ff;
@@ -17,17 +17,17 @@
   --primary-800: #075985;
   --primary-900: #0c4a6e;
 
-  /* 强调色 - 现代紫色渐变 */
-  --accent-50: #faf5ff;
-  --accent-100: #f3e8ff;
-  --accent-200: #e9d5ff;
-  --accent-300: #d8b4fe;
-  --accent-400: #c084fc;
-  --accent-500: #a855f7;
-  --accent-600: #9333ea;
-  --accent-700: #7c3aed;
-  --accent-800: #6b21a8;
-  --accent-900: #581c87;
+  /* 强调色 - 靛蓝色系 (Linear 风格) */
+  --accent-50: #eef2ff;
+  --accent-100: #e0e7ff;
+  --accent-200: #c7d2fe;
+  --accent-300: #a5b4fc;
+  --accent-400: #818cf8;
+  --accent-500: #6366f1;
+  --accent-600: #4f46e5;
+  --accent-700: #4338ca;
+  --accent-800: #3730a3;
+  --accent-900: #312e81;
 
   /* 中性色系 - 现代灰色调 */
   --neutral-50: #f8fafc;
@@ -41,7 +41,7 @@
   --neutral-800: #1e293b;
   --neutral-900: #0f172a;
 
-  /* 语义色彩 - 现代化配色 */
+  /* 语义色彩 */
   --success: #22c55e;
   --success-light: #dcfce7;
   --warning: #f59e0b;
@@ -51,7 +51,7 @@
   --info: #3b82f6;
   --info-light: #dbeafe;
 
-  /* 背景色系 - 层次分明 */
+  /* 背景色系 - 纯白 + 极浅灰 */
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
@@ -59,24 +59,22 @@
   --bg-overlay: rgba(15, 23, 42, 0.05);
   --bg-glass: rgba(248, 250, 252, 0.8);
 
-  /* 边框色系 - 精细层次 */
+  /* 边框色系 */
   --border-light: #e2e8f0;
   --border-medium: #cbd5e1;
   --border-strong: #94a3b8;
   --border-accent: var(--accent-200);
 
-  /* 阴影系统 - 现代层次感 */
+  /* 阴影系统 - 朴素阴影，无 glow/colored */
   --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(15 23 42 / 0.1), 0 1px 2px -1px rgb(15 23 42 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.1), 0 2px 4px -2px rgb(15 23 42 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.1), 0 4px 6px -4px rgb(15 23 42 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(15 23 42 / 0.25);
+  --shadow-sm: 0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.08);
+  --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(15 23 42 / 0.08), 0 4px 6px -4px rgb(15 23 42 / 0.06);
+  --shadow-xl: 0 20px 25px -5px rgb(15 23 42 / 0.08), 0 8px 10px -6px rgb(15 23 42 / 0.06);
+  --shadow-2xl: 0 25px 50px -12px rgb(15 23 42 / 0.2);
   --shadow-inner: inset 0 2px 4px 0 rgb(15 23 42 / 0.05);
-  --shadow-glow: 0 0 20px rgb(168 85 247 / 0.15);
-  --shadow-colored: 0 4px 14px 0 rgb(168 85 247 / 0.15);
 
-  /* 圆角系统 - 现代化设计 */
+  /* 圆角系统 */
   --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
@@ -89,8 +87,8 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
   font-weight: 400;
-  color: var(--gray-800);
-  background-color: var(--gray-50);
+  color: var(--neutral-800);
+  background-color: var(--bg-secondary);
 
   /* 优化渲染 */
   font-synthesis: none;
@@ -147,44 +145,26 @@ a:hover {
   background: var(--neutral-400);
 }
 
-/* Element Plus 组件现代化覆盖 */
+/* Element Plus 组件简约覆盖 */
 .el-button {
   font-weight: 500;
   border-radius: var(--radius-lg);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   border: 1px solid var(--border-light);
   font-family: inherit;
-  position: relative;
-  overflow: hidden;
-}
-
-.el-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.el-button:hover::before {
-  left: 100%;
 }
 
 .el-button--primary {
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-700) 100%);
+  background: var(--accent-600);
   border-color: var(--accent-600);
   color: white;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-xs);
 }
 
 .el-button--primary:hover {
-  background: linear-gradient(135deg, var(--accent-700) 0%, var(--accent-800) 100%);
+  background: var(--accent-700);
   border-color: var(--accent-700);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-colored);
+  box-shadow: var(--shadow-sm);
 }
 
 .el-button--default {
@@ -197,23 +177,19 @@ a:hover {
   background: var(--bg-tertiary);
   border-color: var(--border-strong);
   color: var(--neutral-800);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
 }
 
 .el-card {
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.2s ease;
   background: var(--bg-primary);
   overflow: hidden;
 }
 
 .el-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: var(--border-accent);
+  box-shadow: var(--shadow-md);
 }
 
 .el-table {
@@ -224,7 +200,7 @@ a:hover {
 }
 
 .el-table th.el-table__cell {
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  background: var(--bg-secondary);
   color: var(--neutral-700);
   font-weight: 600;
   border-bottom: 1px solid var(--border-light);
@@ -238,7 +214,7 @@ a:hover {
 }
 
 .el-table .el-table__row:hover {
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--accent-50) 100%);
+  background: var(--bg-secondary);
 }
 
 .el-input__wrapper {
@@ -254,14 +230,20 @@ a:hover {
 
 .el-input__wrapper.is-focus {
   border-color: var(--accent-500);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .el-select .el-input__wrapper {
   border-radius: var(--radius-md);
 }
 
-/* 现代化工具类 */
+/* 对话框全局圆角 */
+.el-dialog {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+/* 简约工具类 */
 .glass-effect {
   background: var(--bg-glass);
   backdrop-filter: blur(16px);
@@ -269,16 +251,8 @@ a:hover {
   box-shadow: var(--shadow-sm);
 }
 
-.gradient-bg {
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--primary-600) 100%);
-}
-
-.gradient-bg-alt {
-  background: linear-gradient(135deg, var(--primary-500) 0%, var(--accent-600) 100%);
-}
-
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent-600) 0%, var(--primary-600) 100%);
+  background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-500) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -287,70 +261,46 @@ a:hover {
 
 .surface-elevated {
   background: var(--bg-primary);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
 }
 
 .surface-interactive {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-
-.surface-interactive::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, var(--accent-500) 0%, var(--primary-500) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
 }
 
 .surface-interactive:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--border-accent);
-}
-
-.surface-interactive:hover::before {
-  opacity: 0.05;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .fade-in {
-  animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.4s ease;
 }
 
 .slide-up {
-  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideUp 0.4s ease;
 }
 
 .slide-in-left {
-  animation: slideInLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideInLeft 0.4s ease;
 }
 
 .slide-in-right {
-  animation: slideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideInRight 0.4s ease;
 }
 
 .scale-in {
-  animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: scaleIn 0.3s ease;
 }
 
-.bounce-in {
-  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-/* 现代化动画关键帧 */
+/* 简化动画关键帧 */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -361,7 +311,7 @@ a:hover {
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -372,7 +322,7 @@ a:hover {
 @keyframes slideInLeft {
   from {
     opacity: 0;
-    transform: translateX(-24px);
+    transform: translateX(-16px);
   }
   to {
     opacity: 1;
@@ -383,7 +333,7 @@ a:hover {
 @keyframes slideInRight {
   from {
     opacity: 0;
-    transform: translateX(24px);
+    transform: translateX(16px);
   }
   to {
     opacity: 1;
@@ -394,7 +344,7 @@ a:hover {
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
@@ -402,38 +352,12 @@ a:hover {
   }
 }
 
-@keyframes bounceIn {
-  from {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-  70% {
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 悬停效果 */
+/* 悬停效果 - 克制 */
 .hover-lift {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.hover-glow {
-  transition: all 0.3s ease;
-}
-
-.hover-glow:hover {
-  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
