@@ -14,14 +14,9 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
-            artifact: '*.dmg'
-          - platform: macos-13
-            args: '--target x86_64-apple-darwin'
-            artifact: '*.dmg'
+            args: '--target universal-apple-darwin'
           - platform: windows-latest
             args: ''
-            artifact: '*.exe'
 
     runs-on: ${{ matrix.platform }}
 
@@ -39,7 +34,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || matrix.platform == 'macos-13' && 'x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -62,8 +57,7 @@ jobs:
             ## DocHub ${{ github.ref_name }}
 
             ### 下载说明
-            - **macOS Apple Silicon**：下载 `*_aarch64.dmg`
-            - **macOS Intel**：下载 `*_x64.dmg`
+            - **macOS**（Apple Silicon / Intel 通用）：下载 `*_universal.dmg`
             - **Windows**：下载 `*_x64-setup.exe`
 
             ### 更新内容
