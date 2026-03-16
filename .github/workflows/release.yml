@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
+            artifact: '*.dmg'
+          - platform: macos-13
+            args: '--target x86_64-apple-darwin'
+            artifact: '*.dmg'
+          - platform: windows-latest
+            args: ''
+            artifact: '*.exe'
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || matrix.platform == 'macos-13' && 'x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './frontend/src-tauri -> target'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: 'DocHub ${{ github.ref_name }}'
+          releaseBody: |
+            ## DocHub ${{ github.ref_name }}
+
+            ### 下载说明
+            - **macOS Apple Silicon**：下载 `*_aarch64.dmg`
+            - **macOS Intel**：下载 `*_x64.dmg`
+            - **Windows**：下载 `*_x64-setup.exe`
+
+            ### 更新内容
+            查看 [完整更新日志](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }})
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
