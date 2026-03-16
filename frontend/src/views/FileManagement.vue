@@ -6,9 +6,13 @@
         <div class="header-left">
           <h1 class="page-title">文档管理</h1>
           <div class="quick-stats">
-            <span class="stat-item">{{ pagination.total }} 个文档</span>
+            <span class="stat-item">共 {{ totalFileCount }} 个文档</span>
             <span class="stat-divider">•</span>
             <span class="stat-item">{{ categoryOptions.length }} 个分类</span>
+            <template v-if="searchForm.categoryId">
+              <span class="stat-divider">•</span>
+              <span class="stat-item stat-filtered">当前筛选 {{ pagination.total }} 条</span>
+            </template>
           </div>
         </div>
         <div class="header-actions">
@@ -57,6 +61,14 @@
         </div>
 
         <div class="sidebar-content">
+          <div
+            class="category-all-item"
+            :class="{ 'is-active': !searchForm.categoryId }"
+            @click="handleAllCategoryClick"
+          >
+            <span class="category-name">全部文档</span>
+            <span class="category-count">{{ totalFileCount }}</span>
+          </div>
           <el-tree
             ref="categoryTreeRef"
             :data="categoryTree"
@@ -64,14 +76,22 @@
             node-key="id"
             :expand-on-click-node="false"
             :highlight-current="true"
+            :default-expand-all="true"
             @node-click="handleCategoryClick"
             class="category-tree"
           >
             <template #default="{ node, data }">
               <div class="category-node">
                 <div class="category-content">
-                  <span class="category-name">{{ node.label }}</span>
-                  <span class="category-count">{{ data.fileCount || 0 }}</span>
+                  <el-tooltip
+                    :content="node.label"
+                    placement="right"
+                    :show-after="500"
+                    :disabled="node.label.length <= 8"
+                  >
+                    <span class="category-name">{{ node.label }}</span>
+                  </el-tooltip>
+                  <span class="category-count">{{ data.totalCount || data.fileCount || 0 }}</span>
                 </div>
                 <div v-if="user?.role === 'admin'" class="category-actions">
                   <el-button link size="small" @click.stop="editCategory(data)" class="action-edit">
@@ -394,6 +414,7 @@ const categoryOptions = ref<FileCategory[]>([])
 const availableTags = ref([])
 const selectedFiles = ref<PolicyFile[]>([])
 const currentPreviewFile = ref<PolicyFile | null>(null)
+const totalFileCount = ref(0) // 全局文档总数（不受分类筛选影响）
 
 // 对话框显示状态
 const showUploadDialog = ref(false)
@@ -473,16 +494,17 @@ const loadTags = async () => {
 const buildCategoryTree = (categories: FileCategory[]): FileCategory[] => {
   const categoryMap = new Map<number, FileCategory>()
   const result: FileCategory[] = []
-  
+
   // 先创建所有节点的映射
   categories.forEach(category => {
     categoryMap.set(category.id, {
       ...category,
       children: [],
-      fileCount: category.fileCount || 0
+      fileCount: category.fileCount || 0,
+      totalCount: category.fileCount || 0
     })
   })
-  
+
   // 构建树形结构
   categories.forEach(category => {
     const node = categoryMap.get(category.id)
@@ -497,7 +519,19 @@ const buildCategoryTree = (categories: FileCategory[]): FileCategory[] => {
       }
     }
   })
-  
+
+  // 递归累加子分类文件数到父分类的 totalCount
+  const calcTotalCount = (nodes: FileCategory[]): number => {
+    return nodes.reduce((sum, node) => {
+      const childCount = node.children && node.children.length > 0
+        ? calcTotalCount(node.children)
+        : 0
+      node.totalCount = (node.fileCount || 0) + childCount
+      return sum + node.totalCount
+    }, 0)
+  }
+  calcTotalCount(result)
+
   return result
 }
 
@@ -526,12 +560,23 @@ const loadFileList = async () => {
     if (response.code === 200) {
       fileList.value = response.data.records || []
       pagination.total = response.data.total || 0
+      // 无分类筛选时更新全局文档总数
+      if (!searchForm.categoryId) {
+        totalFileCount.value = response.data.total || 0
+      }
     }
   } catch (error) {
     ElMessage.error('加载文件列表失败')
   } finally {
     loading.value = false
   }
+}
+
+const handleAllCategoryClick = () => {
+  searchForm.categoryId = undefined
+  pagination.page = 1
+  categoryTreeRef.value?.setCurrentKey(null)
+  loadFileList()
 }
 
 const handleCategoryClick = (data: FileCategory) => {
@@ -557,6 +602,7 @@ const resetSearch = () => {
     direction: 'desc'
   })
   dateRange.value = null
+  categoryTreeRef.value?.setCurrentKey(null)
   loadFileList()
 }
 
@@ -975,7 +1021,7 @@ const handleBatchAction = (command: string) => {
 /* 防溢出的主布局 */
 .main-layout {
   display: grid;
-  grid-template-columns: minmax(200px, 240px) 1fr;
+  grid-template-columns: minmax(220px, 260px) 1fr;
   gap: 1rem;
   align-items: start;
   flex: 1;
@@ -1075,9 +1121,60 @@ const handleBatchAction = (command: string) => {
   opacity: 0.5;
 }
 
+/* 全部文档项 */
+.category-all-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.category-all-item:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+}
+
+.category-all-item.is-active {
+  background: var(--accent-50);
+  border-color: var(--accent-200);
+}
+
+.category-all-item.is-active .category-name {
+  color: var(--accent-700);
+  font-weight: 700;
+}
+
+.category-all-item.is-active .category-count {
+  background: var(--accent-600);
+  color: white;
+  border-color: var(--accent-700);
+}
+
+.category-all-item .category-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--neutral-700);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 筛选状态标注 */
+.stat-filtered {
+  color: var(--accent-600);
+  font-weight: 600;
+}
+
 .category-tree {
   background: transparent !important;
-  padding-top: 0.5rem;
+  padding-top: 0.25rem;
 }
 
 .category-tree :deep(.el-tree-node__content) {
@@ -1091,7 +1188,7 @@ const handleBatchAction = (command: string) => {
 }
 
 .category-tree :deep(.el-tree-node__children) {
-  padding-left: 1rem !important;
+  padding-left: 0.75rem !important;
 }
 
 .category-tree :deep(.el-tree-node__expand-icon) {
@@ -1131,11 +1228,11 @@ const handleBatchAction = (command: string) => {
   justify-content: space-between;
   width: 100%;
   min-width: 0; /* 允许子元素收缩 */
-  padding: 1rem 0.75rem;
+  padding: 0.5rem 0.5rem;
   border-radius: var(--radius-lg);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  min-height: 48px;
+  min-height: 36px;
   position: relative;
   background: transparent;
   border: 1px solid transparent;
@@ -1196,21 +1293,22 @@ const handleBatchAction = (command: string) => {
 }
 
 .category-count {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--accent-600);
   background: var(--accent-50);
-  padding: 0.375rem 0.75rem;
+  padding: 0.2rem 0.45rem;
   border-radius: var(--radius-full);
-  min-width: 2.5rem;
+  min-width: 1.8rem;
   text-align: center;
-  margin-right: 0.75rem;
+  margin-right: 0.4rem;
   font-weight: 600;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
+  height: 20px;
   border: 1px solid var(--accent-200);
+  flex-shrink: 0;
 }
 
 .category-node:hover .category-count {
@@ -1225,14 +1323,14 @@ const handleBatchAction = (command: string) => {
 
 .category-actions {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.125rem;
   align-items: center;
   opacity: 0;
   transform: translateX(8px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
-  flex-shrink: 0; /* 防止收缩 */
-  min-width: 70px; /* 保证最小宽度 */
+  flex-shrink: 0;
+  min-width: 56px;
 }
 
 .category-node:hover .category-actions {
@@ -1242,8 +1340,8 @@ const handleBatchAction = (command: string) => {
 }
 
 .category-actions .el-button {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border-radius: var(--radius-lg);
   display: flex;

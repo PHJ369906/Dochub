@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     :title="file?.title || '文件预览'"
-    width="90%"
+    width="75%"
     :before-close="handleClose"
     class="preview-dialog"
   >
@@ -39,18 +39,17 @@
             :src="`data:${previewData.mimeType};base64,${previewData.content}`"
             :alt="file.title"
             fit="contain"
-            style="width: 100%; height: 500px;"
+            style="width: 100%; height: 440px;"
             :preview-src-list="[`data:${previewData.mimeType};base64,${previewData.content}`]"
           />
         </div>
 
-        <!-- PDF预览 -->
-        <div v-else-if="previewType === 'pdf' && previewData" class="pdf-preview">
-          <iframe
-            :src="`data:application/pdf;base64,${previewData.content}`"
-            style="width: 100%; height: 600px; border: none;"
-          />
-        </div>
+        <!-- PDF预览：独立组件，onMounted 时 canvas 确定已在 DOM -->
+        <PdfViewer
+          v-else-if="previewType === 'pdf' && previewData"
+          :base64="previewData.content"
+          @open-external="openWithSystemApp"
+        />
 
         <!-- 文本预览 -->
         <div v-else-if="previewType === 'text' && previewData" class="text-preview">
@@ -107,10 +106,10 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Document } from '@element-plus/icons-vue'
-import { open as shellOpen } from '@tauri-apps/plugin-shell'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import { previewFile as apiPreviewFile, getFilePath, openFileWithSystem, openFileFolder as apiOpenFileFolder } from '@/api/file'
 import type { PolicyFile } from '@/types/file'
+import PdfViewer from './PdfViewer.vue'
 
 interface Props {
   modelValue: boolean
@@ -127,6 +126,7 @@ const emit = defineEmits<Emits>()
 const previewLoading = ref(false)
 const previewData = ref<{ previewType: string; content: string; mimeType: string } | null>(null)
 const filePath = ref('')
+let loadingFileId: number | null = null
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -146,15 +146,17 @@ const assetUrl = computed(() => {
 
 const loadPreview = async () => {
   if (!props.file) return
+  // 同一文件已在加载中，跳过重复请求
+  if (loadingFileId === props.file.id) return
+  loadingFileId = props.file.id
 
   previewLoading.value = true
+
   try {
     const response = await apiPreviewFile(props.file.id)
     if (response.code === 200) {
       previewData.value = response.data
     }
-
-    // 获取文件路径用于系统打开
     const pathResp = await getFilePath(props.file.id)
     if (pathResp.code === 200) {
       filePath.value = pathResp.data
@@ -163,6 +165,7 @@ const loadPreview = async () => {
     console.error('加载预览失败:', error)
   } finally {
     previewLoading.value = false
+    loadingFileId = null
   }
 }
 
@@ -213,6 +216,7 @@ watch(dialogVisible, (visible) => {
   } else {
     previewData.value = null
     filePath.value = ''
+    loadingFileId = null
   }
 })
 </script>
@@ -221,7 +225,7 @@ watch(dialogVisible, (visible) => {
 .preview-dialog {
   :deep(.el-dialog__body) {
     padding: 20px;
-    max-height: 80vh;
+    max-height: 75vh;
     overflow-y: auto;
   }
 }
@@ -257,7 +261,7 @@ watch(dialogVisible, (visible) => {
 }
 
 .preview-content {
-  min-height: 400px;
+  min-height: 340px;
   border: 1px solid #e6e6e6;
   border-radius: 4px;
   overflow: hidden;
@@ -270,15 +274,11 @@ watch(dialogVisible, (visible) => {
   padding: 20px;
 }
 
-.pdf-preview {
-  display: flex;
-  flex-direction: column;
-}
 
 .text-preview {
   padding: 20px;
   background-color: #f8f9fa;
-  height: 500px;
+  height: 440px;
   overflow: auto;
 }
 
@@ -293,7 +293,7 @@ watch(dialogVisible, (visible) => {
 
 .html-preview {
   padding: 20px;
-  max-height: 600px;
+  max-height: 500px;
   overflow-y: auto;
   background-color: #fff;
 }
@@ -346,7 +346,7 @@ watch(dialogVisible, (visible) => {
 
 .video-preview video {
   max-width: 100%;
-  max-height: 600px;
+  max-height: 500px;
 }
 
 .audio-preview {

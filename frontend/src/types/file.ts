@@ -41,6 +41,8 @@ export interface FileCategory {
   children?: FileCategory[]
   files?: PolicyFile[]
   fileCount?: number
+  totalCount?: number  // 包含子分类文件数的总计
+  level?: number
 }
 
 export interface FileTag {

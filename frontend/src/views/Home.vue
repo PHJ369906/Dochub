@@ -129,11 +129,11 @@
           </div>
           <div class="activity-content">
             <div class="activity-metric">
-              <span class="metric-value">0</span>
+              <span class="metric-value">{{ totalFileCount }}</span>
               <span class="metric-label">总文档数</span>
             </div>
             <div class="activity-description">
-              开始上传您的第一个文档
+              {{ totalFileCount > 0 ? `已上传 ${totalFileCount} 个文档` : '开始上传您的第一个文档' }}
             </div>
           </div>
         </div>
@@ -187,19 +187,32 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getFileList } from '@/api/file'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const user = computed(() => authStore.user)
+const totalFileCount = ref(0)
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '首次登录'
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
+
+onMounted(async () => {
+  try {
+    const response = await getFileList({ page: 0, size: 1 })
+    if (response.code === 200) {
+      totalFileCount.value = response.data.total || 0
+    }
+  } catch (error) {
+    // 加载失败静默处理
+  }
+})
 
 const goToProfile = () => {
   router.push('/profile')
