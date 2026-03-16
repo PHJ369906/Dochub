@@ -1,259 +1,143 @@
-# Vue3 + SpringBoot 全栈项目
+<div align="center">
 
-这是一个基于 Vue3 + SpringBoot + Sa-Token 的全栈Web应用项目，实现了完整的用户认证和权限管理功能。
+# DocHub 文档管理系统
 
-## 项目结构
+**基于 Tauri 2 + Vue 3 的跨平台桌面文档管理工具**
+
+[![Vue](https://img.shields.io/badge/Vue-3.x-4FC08D?logo=vue.js)](https://vuejs.org/)
+[![Tauri](https://img.shields.io/badge/Tauri-2.x-24C8D8?logo=tauri)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-1.x-CE422B?logo=rust)](https://www.rust-lang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+</div>
+
+---
+
+## 项目简介
+
+DocHub 是一款**本地优先**的桌面文档管理工具，无需服务器、开箱即用。支持文档的上传、分类、标签、搜索与在线预览，内置跨平台 PDF 渲染引擎，同时适用于 macOS 和 Windows。
+
+## 核心特性
+
+- **本地存储** — 数据保存在本地 SQLite，无需联网，数据完全自主可控
+- **文档管理** — 支持上传、编辑、删除、批量操作、分页浏览
+- **多级分类** — 树形分类结构，支持无限层级，悬停显示完整名称
+- **标签系统** — 自定义标签，支持多标签组合筛选
+- **在线预览** — 内置 PDF.js 渲染（Mac/Windows 均支持）、图片、文本、Word/Excel 转 HTML 预览
+- **高级搜索** — 关键词 + 分类 + 标签 + 发布机关 + 时间范围组合筛选
+- **数据导入导出** — 支持文档元数据批量导入导出
+- **跨平台** — 基于 Tauri 2，打包为 macOS（dmg）和 Windows（nsis 安装包）
+
+## 技术架构
 
 ```
-├── frontend/          # Vue3前端项目
+DocHub
+├── frontend/                   # 前端（Vue 3 + TypeScript）
 │   ├── src/
-│   │   ├── api/       # API接口
-│   │   ├── components/# 组件
-│   │   ├── router/    # 路由配置
-│   │   ├── stores/    # Pinia状态管理
-│   │   ├── types/     # TypeScript类型定义
-│   │   ├── views/     # 页面组件
-│   │   └── main.ts    # 入口文件
-│   ├── package.json
-│   └── vite.config.ts
-├── backend/           # SpringBoot后端项目
-│   ├── src/main/java/com/example/
-│   │   ├── config/    # 配置类
-│   │   ├── controller/# 控制器
-│   │   ├── dto/       # 数据传输对象
-│   │   ├── entity/    # 实体类
-│   │   ├── repository/# 数据访问层
-│   │   ├── service/   # 服务层
-│   │   └── exception/ # 异常处理
-│   ├── src/main/resources/
-│   │   └── application.yml
-│   └── pom.xml
-└── README.md
+│   │   ├── api/                # Tauri IPC 调用封装
+│   │   ├── components/         # 通用组件
+│   │   ├── views/              # 页面视图
+│   │   ├── stores/             # Pinia 状态管理
+│   │   └── types/              # TypeScript 类型定义
+│   └── src-tauri/              # Tauri 后端（Rust）
+│       └── src/
+│           ├── commands/       # IPC 命令处理
+│           ├── services/       # 业务逻辑
+│           └── db/             # SQLite 数据库操作
+└── sql/                        # 数据库结构参考脚本
 ```
 
-## 技术栈
+### 前端技术栈
 
-### 前端
-- **Vue 3** - 渐进式JavaScript框架
-- **TypeScript** - JavaScript的超集
-- **Vite** - 现代化构建工具
-- **Vue Router** - 官方路由管理器
-- **Pinia** - 状态管理库
-- **Element Plus** - Vue 3 UI组件库
-- **Tailwind CSS** - 实用优先的CSS框架
-- **Axios** - HTTP客户端
+| 技术 | 版本 | 说明 |
+|------|------|------|
+| Vue 3 | 3.4+ | 响应式 UI 框架 |
+| TypeScript | 5.x | 类型安全 |
+| Vite | 5.x | 构建工具 |
+| Element Plus | 2.4+ | UI 组件库 |
+| Pinia | 2.x | 状态管理 |
+| pdfjs-dist | 4.x | PDF 渲染（兼容 WebKit / WebView2）|
+| Tailwind CSS | 3.x | 原子化样式 |
 
-### 后端
-- **SpringBoot 3.x** - Java企业级应用框架
-- **Sa-Token** - 轻量级权限认证框架
-- **Spring Data JPA** - 数据持久化
-- **MySQL** - 关系型数据库
-- **Redis** - 内存数据库
-- **Knife4j** - API文档工具
+### 后端技术栈（Rust）
 
-## 功能特性
+| 技术 | 说明 |
+|------|------|
+| Tauri 2 | 跨平台桌面运行时 |
+| SQLite（rusqlite）| 嵌入式数据库，零外部依赖 |
+| quick-xml | Office 文档 XML 解析 |
 
-### 基础功能
-- ✅ 用户注册/登录
-- ✅ JWT Token认证
-- ✅ 路由权限控制
-- ✅ 角色权限管理
-- ✅ 用户信息管理
-- ✅ 响应式设计
-- ✅ API文档集成
+## 开发环境准备
 
-### 文件管理功能
-- ✅ 文件上传（支持多文件、拖拽上传）
-- ✅ 文件分类管理（树形结构）
-- ✅ 文件标签系统
-- ✅ 在线文件预览（内置预览引擎）
-- ✅ 高级搜索和过滤
-- ✅ 文件下载统计
-- ✅ 权限控制（公开/内部文件）
-- ✅ 支持多种文件格式（PDF、Office、图片、视频等）
+### 安装依赖
 
-## 环境要求
-
-### 前端
-- Node.js >= 16
-- npm 或 yarn
-
-### 后端
-- JDK 17+
-- Maven 3.6+
-- MySQL 8.0+
-- Redis
-
-## 快速开始
-
-### 方式一：使用Docker Compose（推荐）
-
-1. **启动依赖服务**
 ```bash
-docker-compose up -d
+# 1. 安装 Rust（如未安装）
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 2. 安装 Node.js 18+
+nvm install 18
+
+# 3. 安装前端依赖
+cd frontend && npm install
 ```
 
-这将启动：
-- MySQL数据库（端口3306）
-- Redis缓存（端口6379）
+### 启动开发服务器
 
-2. **初始化数据库**
-```bash
-# Windows
-setup-database.bat
-
-# Linux/Mac
-./setup-database.sh
-```
-
-3. **启动后端**
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-4. **启动前端**
 ```bash
 cd frontend
-npm install
-npm run dev
+npm run tauri:dev
 ```
 
-### 方式二：手动安装
+> 首次运行需编译 Rust 依赖（约 3-5 分钟），后续启动秒开。
 
-1. **安装MySQL和Redis**
-   - MySQL 8.0+
-   - Redis 6.0+
+### 生产构建
 
-2. **创建数据库**
-```sql
-CREATE DATABASE document_center_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-3. **初始化数据库结构**
-```bash
-# 完整初始化（包含示例数据）
-mysql -u root -p < sql/init.sql
-
-# 或仅初始化结构（生产环境）
-mysql -u root -p vue_springboot_db < sql/schema.sql
-```
-
-4. **启动Redis**
-确保Redis服务正在运行（默认端口6379）
-
-5. **后端启动**
-```bash
-cd backend
-mvn clean install
-mvn spring-boot:run
-```
-
-6. **前端启动**
 ```bash
 cd frontend
-npm install
-npm run dev
+npm run tauri:build
 ```
 
-### 访问应用
+构建产物位于 `frontend/src-tauri/target/release/bundle/`：
+- macOS：`*.dmg`
+- Windows：`*_setup.exe`（NSIS 安装包）
 
-- 前端应用: http://localhost:3000
-- 后端API: http://localhost:8080
-- API文档: http://localhost:8080/doc.html
+## 文件预览支持
+
+| 格式 | 预览方式 |
+|------|----------|
+| PDF | pdfjs-dist Canvas 渲染，支持翻页 / 缩放 / Retina 高清 |
+| 图片（jpg / png / gif / webp 等）| Base64 内嵌 |
+| 文本（txt / md / json / xml 等）| 纯文本展示 |
+| Word（doc / docx）| XML 解析转 HTML |
+| Excel（xls / xlsx）| XML 解析转表格 |
+| 视频 / 音频 | HTML5 原生播放器 |
+| PPT / 其他 | 调用系统默认应用打开 |
 
 ## 默认账户
 
-系统启动后会自动创建以下测试账户：
+| 用户名 | 密码 | 角色 |
+|--------|------|------|
+| admin | admin123 | 管理员（可管理用户和分类）|
+| user | user123 | 普通用户 |
+| demo | demo123 | 演示账户 |
 
-| 用户名 | 密码 | 角色 | 说明 |
-|--------|------|------|------|
-| admin | admin123 | 管理员 | 拥有所有权限，可以管理用户和文件分类 |
-| user | user123 | 普通用户 | 可以上传、查看、管理自己的文件 |
-| demo | demo123 | 演示用户 | 用于演示和测试 |
+## 常见问题
 
-## 数据库说明
+**Q: 首次启动很慢？**
+A: Tauri 首次运行需编译 Rust 后端，约 3-5 分钟，后续启动秒开。
 
-### 数据库结构
-- **sys_user**: 用户表，存储用户信息和角色
-- **file_category**: 文件分类表，支持树形结构
-- **file_tag**: 文件标签表，支持多标签管理
-- **policy_file**: 政策文件表，存储文件元数据
-- **policy_file_tag**: 文件标签关联表
+**Q: Windows 上 PDF 预览空白？**
+A: 已修复。WebView2 不内置 PDF 查看器，项目使用 pdfjs-dist 4.x 通过 Canvas 渲染，无需任何插件。
 
-### 初始化脚本
-- `sql/init.sql`: 完整初始化（包含示例数据）
-- `sql/schema.sql`: 仅结构初始化（生产环境）
-- `sql/README.md`: 详细的数据库说明文档
+**Q: PDF 预览文字模糊？**
+A: 已修复。渲染时按设备像素比（DPR）放大 Canvas 并通过 CSS 缩回逻辑像素，Retina 屏完全清晰。
 
-### 数据库配置
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/document_center_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectionCollation=utf8mb4_unicode_ci
-    username: root
-    password: 123456
-```
-
-## API接口
-
-### 认证相关
-- `POST /auth/login` - 用户登录
-- `POST /auth/register` - 用户注册
-- `POST /auth/logout` - 用户登出
-- `GET /auth/userinfo` - 获取当前用户信息
-- `GET /auth/users` - 获取用户列表（管理员）
-- `GET /auth/check` - 检查登录状态
-
-### 文件管理相关
-- `POST /files/upload` - 上传文件
-- `GET /files` - 获取文件列表（支持搜索和过滤）
-- `GET /files/{id}` - 获取文件详情
-- `PUT /files/{id}` - 更新文件信息
-- `DELETE /files/{id}` - 删除文件
-- `GET /files/download/{id}` - 下载文件
-- `GET /files/preview/{id}` - 获取文件预览信息
-- `GET /files/popular` - 获取热门文件
-- `GET /files/latest` - 获取最新文件
-
-### 分类管理相关
-- `GET /categories` - 获取所有分类
-- `POST /categories` - 创建分类（管理员）
-- `PUT /categories/{id}` - 更新分类（管理员）
-- `DELETE /categories/{id}` - 删除分类（管理员）
-
-## 开发说明
-
-### 前端开发
-- 使用 `npm run dev` 启动开发服务器
-- 使用 `npm run build` 构建生产版本
-- 使用 `npm run lint` 进行代码检查
-
-### 后端开发
-- 使用 `mvn spring-boot:run` 启动开发服务器
-- 使用 `mvn clean package` 构建生产版本
-- API文档自动生成，访问 `/doc.html`
-
-## 部署
-
-### 前端部署
-```bash
-cd frontend
-npm run build
-# 将 dist 目录部署到Web服务器
-```
-
-### 后端部署
-```bash
-cd backend
-mvn clean package
-java -jar target/springboot-backend-0.0.1-SNAPSHOT.jar
-```
-
-## 许可证
-
-MIT License
-
-## 贡献
+## Contributing
 
 欢迎提交 Issue 和 Pull Request！
+
+## License
+
+[MIT](LICENSE)
