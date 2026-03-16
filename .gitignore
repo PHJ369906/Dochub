@@ -45,4 +45,4 @@ docker-compose.override.yml
 # Temporary files
 *.tmp
 *.temp
-*.bak
+*.bakfrontend/public/pdf.worker.min.mjs
