@@ -5,7 +5,17 @@
         <el-button size="small" @click="prevPage" :disabled="currentPage <= 1">‹ 上一页</el-button>
         <el-button size="small" @click="nextPage" :disabled="currentPage >= totalPages">下一页 ›</el-button>
       </el-button-group>
-      <span class="pdf-page-info">{{ currentPage }} / {{ totalPages }}</span>
+      <el-input-number
+        v-model="jumpPage"
+        :min="1"
+        :max="totalPages"
+        :controls="false"
+        size="small"
+        class="pdf-jump-input"
+        @change="handleJump"
+        @keyup.enter="handleJump"
+      />
+      <span class="pdf-page-info">/ {{ totalPages }}</span>
       <el-button-group>
         <el-button size="small" @click="zoomOut" :disabled="scale <= 0.5">－</el-button>
         <el-button size="small" @click="zoomIn" :disabled="scale >= 3">＋</el-button>
@@ -44,6 +54,7 @@ const emit = defineEmits<{
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const currentPage = ref(1)
 const totalPages = ref(0)
+const jumpPage = ref(1)
 const scale = ref(1.2)
 const loading = ref(true)
 const error = ref('')
@@ -107,6 +118,7 @@ const renderPage = async (pageNum: number) => {
     renderTask = page.render({ canvasContext: ctx, viewport })
     await renderTask.promise
     currentPage.value = pageNum
+    jumpPage.value = pageNum
   } catch (e: any) {
     if (e?.name !== 'RenderingCancelledException') {
       error.value = `渲染失败：${e?.message || '未知错误'}`
@@ -120,6 +132,15 @@ const prevPage = () => {
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) renderPage(currentPage.value + 1)
+}
+
+const handleJump = () => {
+  const page = Math.round(jumpPage.value)
+  if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
+    renderPage(page)
+  } else {
+    jumpPage.value = currentPage.value
+  }
 }
 
 const zoomIn = () => {
@@ -150,11 +171,20 @@ const zoomOut = () => {
   flex-shrink: 0;
 }
 
+.pdf-jump-input {
+  width: 56px;
+}
+
+.pdf-jump-input :deep(.el-input__inner) {
+  text-align: center;
+  padding: 0 4px;
+}
+
 .pdf-page-info,
 .pdf-scale-info {
   font-size: 13px;
   color: #606266;
-  min-width: 48px;
+  min-width: 32px;
 }
 
 .pdf-canvas-area {

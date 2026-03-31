@@ -44,7 +44,7 @@
     </div>
 
     <!-- 重构的主要内容区域 -->
-    <div class="main-layout">
+    <div class="main-layout" :style="mainLayoutStyle">
       <!-- 精简的侧边栏 -->
       <aside class="sidebar">
         <div class="sidebar-header">
@@ -61,51 +61,61 @@
         </div>
 
         <div class="sidebar-content">
+          <!-- 全部文档 -->
           <div
-            class="category-all-item"
+            class="cat-item"
             :class="{ 'is-active': !searchForm.categoryId }"
             @click="handleAllCategoryClick"
           >
-            <span class="category-name">全部文档</span>
-            <span class="category-count">{{ totalFileCount }}</span>
+            <span class="cat-indent" style="width:0" />
+            <span class="cat-name">全部文档</span>
+            <span class="cat-count">{{ totalFileCount }}</span>
           </div>
-          <el-tree
-            ref="categoryTreeRef"
-            :data="categoryTree"
-            :props="treeProps"
-            node-key="id"
-            :expand-on-click-node="false"
-            :highlight-current="true"
-            :default-expand-all="true"
-            @node-click="handleCategoryClick"
-            class="category-tree"
-          >
-            <template #default="{ node, data }">
-              <div class="category-node">
-                <div class="category-content">
-                  <el-tooltip
-                    :content="node.label"
-                    placement="right"
-                    :show-after="500"
-                    :disabled="node.label.length <= 8"
-                  >
-                    <span class="category-name">{{ node.label }}</span>
-                  </el-tooltip>
-                  <span class="category-count">{{ data.totalCount || data.fileCount || 0 }}</span>
-                </div>
-                <div v-if="user?.role === 'admin'" class="category-actions">
-                  <el-button link size="small" @click.stop="editCategory(data)" class="action-edit">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                  <el-button link size="small" @click.stop="deleteCategory(data)" class="action-delete">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </div>
-              </div>
-            </template>
-          </el-tree>
+
+          <!-- 自定义扁平分类列表 -->
+          <template v-for="cat in flatCategories" :key="cat.id">
+            <div
+              class="cat-item"
+              :class="{ 'is-active': searchForm.categoryId === cat.id }"
+              :style="{ paddingLeft: `${6 + cat.depth * 14}px` }"
+              @click="handleCategoryClick(cat)"
+            >
+              <!-- 展开/折叠箭头 -->
+              <span
+                v-if="cat.hasChildren"
+                class="cat-arrow"
+                :class="{ 'is-expanded': expandedIds.has(cat.id) }"
+                @click.stop="toggleExpand(cat.id)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </span>
+              <span v-else class="cat-arrow-placeholder" />
+
+              <el-tooltip :content="cat.name" placement="right" :show-after="600" :disabled="cat.name.length <= 10">
+                <span class="cat-name">{{ cat.name }}</span>
+              </el-tooltip>
+              <span class="cat-count">{{ cat.totalCount || 0 }}</span>
+
+              <span v-if="user?.role === 'admin'" class="cat-actions">
+                <el-button link size="small" @click.stop="editCategory(cat)">
+                  <el-icon><Edit /></el-icon>
+                </el-button>
+                <el-button link size="small" @click.stop="openMoveDialog(cat)">
+                  <el-icon><Rank /></el-icon>
+                </el-button>
+                <el-button link size="small" @click.stop="deleteCategory(cat)">
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </span>
+            </div>
+          </template>
         </div>
       </aside>
+
+      <!-- 侧边栏拖拽调宽把手 -->
+      <div class="resize-handle" @mousedown="onResizeStart" />
 
       <!-- 主内容区域 -->
       <main class="main-content">
@@ -378,6 +388,44 @@
       :categories="categoryOptions"
     />
 
+    <!-- 移动分类对话框 -->
+    <el-dialog
+      v-model="showMoveCategoryDialog"
+      title="移动分类"
+      width="400px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="movingCategory" class="move-dialog-body">
+        <div class="move-source">
+          <span class="move-label">当前分类：</span>
+          <el-tag>{{ movingCategory.name }}</el-tag>
+        </div>
+        <div class="move-target">
+          <span class="move-label">移动到：</span>
+          <el-select
+            v-model="moveTargetId"
+            placeholder="选择目标父分类（不选则移到根目录）"
+            clearable
+            style="width: 100%"
+          >
+            <el-option label="根目录（顶级分类）" :value="null" />
+            <el-option
+              v-for="opt in moveTargetOptions"
+              :key="opt.id"
+              :label="opt.label"
+              :value="opt.id"
+              :style="{ paddingLeft: `${12 + opt.depth * 16}px` }"
+            />
+          </el-select>
+        </div>
+        <p class="move-tip">移动后，该分类下的所有子分类和文件将保持原有层级结构一起迁移。</p>
+      </div>
+      <template #footer>
+        <el-button @click="showMoveCategoryDialog = false">取消</el-button>
+        <el-button type="primary" :loading="moveLoading" @click="confirmMove">确认移动</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 数据导入对话框 -->
     <DataImportDialog
       v-model="showImportDialog"
@@ -387,14 +435,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, Edit, Delete, Upload, Refresh, Search, Filter,
-  View, Download, MoreFilled, RefreshLeft, ArrowDown, Sort
+  View, Download, MoreFilled, RefreshLeft, ArrowDown, Sort, Rank
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import { getFileList, getCategories, deleteFile, createCategory, deleteCategory as deleteCategoryApi, updateCategory, getAllTags } from '@/api/file'
+import { getFileList, getCategories, deleteFile, createCategory, deleteCategory as deleteCategoryApi, updateCategory, getAllTags, moveCategory as moveCategoryApi } from '@/api/file'
 import type { PolicyFile, FileCategory, FileSearchParams } from '@/types/file'
 import FileUploadDialog from '@/components/FileUploadDialog.vue'
 import CategoryDialog from '@/components/CategoryDialog.vue'
@@ -406,6 +454,38 @@ import DataImportDialog from '@/components/DataImportDialog.vue'
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 
+// 侧边栏宽度（可拖拽调整，持久化到 localStorage）
+const SIDEBAR_WIDTH_KEY = 'doc-sidebar-width'
+const sidebarWidth = ref(parseInt(localStorage.getItem(SIDEBAR_WIDTH_KEY) || '260'))
+const isResizing = ref(false)
+const mainLayoutStyle = computed(() => ({
+  gridTemplateColumns: `${sidebarWidth.value}px 4px 1fr`
+}))
+
+let _resizeStartX = 0
+let _resizeStartWidth = 0
+const _onResizeMove = (e: MouseEvent) => {
+  const delta = e.clientX - _resizeStartX
+  sidebarWidth.value = Math.min(480, Math.max(180, _resizeStartWidth + delta))
+}
+const _onResizeEnd = () => {
+  isResizing.value = false
+  document.removeEventListener('mousemove', _onResizeMove)
+  document.removeEventListener('mouseup', _onResizeEnd)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidth.value))
+}
+const onResizeStart = (e: MouseEvent) => {
+  isResizing.value = true
+  _resizeStartX = e.clientX
+  _resizeStartWidth = sidebarWidth.value
+  document.addEventListener('mousemove', _onResizeMove)
+  document.addEventListener('mouseup', _onResizeEnd)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
 // 响应式数据
 const loading = ref(false)
 const fileList = ref<PolicyFile[]>([])
@@ -414,7 +494,39 @@ const categoryOptions = ref<FileCategory[]>([])
 const availableTags = ref([])
 const selectedFiles = ref<PolicyFile[]>([])
 const currentPreviewFile = ref<PolicyFile | null>(null)
-const totalFileCount = ref(0) // 全局文档总数（不受分类筛选影响）
+const totalFileCount = ref(0)
+const expandedIds = ref<Set<number>>(new Set()) // 已展开的分类 id
+
+// 扁平化分类树，加入 depth / hasChildren，按展开状态过滤
+type FlatCategory = FileCategory & { depth: number; hasChildren: boolean }
+const flatCategories = computed<FlatCategory[]>(() => {
+  const result: FlatCategory[] = []
+  const walk = (list: FileCategory[], depth: number) => {
+    list.forEach(cat => {
+      const hasChildren = !!(cat.children && cat.children.length > 0)
+      result.push({ ...cat, depth, hasChildren })
+      if (hasChildren && expandedIds.value.has(cat.id)) {
+        walk(cat.children!, depth + 1)
+      }
+    })
+  }
+  walk(categoryTree.value, 0)
+  return result
+})
+
+const toggleExpand = (id: number) => {
+  const s = new Set(expandedIds.value)
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+  expandedIds.value = s
+}
+
+// 加载分类后默认展开第一层
+watch(categoryTree, (tree) => {
+  const ids = new Set<number>()
+  tree.forEach(cat => ids.add(cat.id))
+  expandedIds.value = ids
+}, { immediate: true })
 
 // 对话框显示状态
 const showUploadDialog = ref(false)
@@ -424,10 +536,70 @@ const showAdvancedSearch = ref(false)
 const showFileEditDialog = ref(false)
 const showExportDialog = ref(false)
 const showImportDialog = ref(false)
+const showMoveCategoryDialog = ref(false)
 
-// 当前编辑的分类和文件
-const currentEditCategory = ref<FileCategory | null>(null)
-const currentEditFile = ref<PolicyFile | null>(null)
+// 移动分类
+const movingCategory = ref<FileCategory | null>(null)
+const moveTargetId = ref<number | null>(null)
+const moveLoading = ref(false)
+
+// 获取某分类及其所有后代的 id 集合（用于排除不可选项）
+const getDescendantIds = (cat: FileCategory): Set<number> => {
+  const ids = new Set<number>([cat.id])
+  const walk = (list: FileCategory[]) => {
+    list.forEach(c => {
+      ids.add(c.id)
+      if (c.children?.length) walk(c.children)
+    })
+  }
+  if (cat.children?.length) walk(cat.children)
+  return ids
+}
+
+// 移动对话框的可选目标列表（排除自身及后代）
+const moveTargetOptions = computed(() => {
+  if (!movingCategory.value) return []
+  const excludeIds = getDescendantIds(movingCategory.value)
+  const result: Array<{ id: number; label: string; depth: number }> = []
+  const walk = (list: FileCategory[], depth: number) => {
+    list.forEach(cat => {
+      if (!excludeIds.has(cat.id)) {
+        result.push({ id: cat.id, label: cat.name, depth })
+        if (cat.children?.length) walk(cat.children, depth + 1)
+      }
+    })
+  }
+  walk(categoryTree.value, 0)
+  return result
+})
+
+const openMoveDialog = (cat: FileCategory) => {
+  movingCategory.value = cat
+  moveTargetId.value = null
+  showMoveCategoryDialog.value = true
+}
+
+const confirmMove = async () => {
+  if (!movingCategory.value) return
+  moveLoading.value = true
+  try {
+    const response = await moveCategoryApi(movingCategory.value.id, moveTargetId.value ?? undefined)
+    if (response.code === 200) {
+      ElMessage.success('分类移动成功')
+      showMoveCategoryDialog.value = false
+      await loadCategories()
+      if (searchForm.categoryId === movingCategory.value.id) {
+        loadFileList()
+      }
+    } else {
+      ElMessage.error(response.message || '移动失败')
+    }
+  } catch (e: any) {
+    ElMessage.error(e.message || '移动失败')
+  } finally {
+    moveLoading.value = false
+  }
+}
 
 // 搜索表单
 const searchForm = reactive<FileSearchParams>({
@@ -450,14 +622,6 @@ const pagination = reactive({
   total: 0
 })
 
-// 树形组件配置
-const treeProps = {
-  children: 'children',
-  label: 'name'
-}
-
-// 计算属性
-const categoryTreeRef = ref()
 
 // 生命周期
 onMounted(() => {
@@ -575,7 +739,7 @@ const loadFileList = async () => {
 const handleAllCategoryClick = () => {
   searchForm.categoryId = undefined
   pagination.page = 1
-  categoryTreeRef.value?.setCurrentKey(null)
+  
   loadFileList()
 }
 
@@ -602,7 +766,7 @@ const resetSearch = () => {
     direction: 'desc'
   })
   dateRange.value = null
-  categoryTreeRef.value?.setCurrentKey(null)
+  
   loadFileList()
 }
 
@@ -847,8 +1011,20 @@ const batchDelete = async () => {
       }
     )
 
-    // 这里添加批量删除的API调用
-    ElMessage.success(`成功删除 ${selectedFiles.value.length} 个文件`)
+    // 并发执行删除
+    const results = await Promise.allSettled(
+      selectedFiles.value.map(file => deleteFile(file.id))
+    )
+
+    const successCount = results.filter(r => r.status === 'fulfilled' && (r.value as any).code === 200).length
+    const failCount = results.length - successCount
+
+    if (failCount === 0) {
+      ElMessage.success(`成功删除 ${successCount} 个文件`)
+    } else {
+      ElMessage.warning(`删除完成：成功 ${successCount} 个，失败 ${failCount} 个`)
+    }
+
     selectedFiles.value = []
     await loadFileList()
   } catch (error) {
@@ -1021,12 +1197,32 @@ const handleBatchAction = (command: string) => {
 /* 防溢出的主布局 */
 .main-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 260px) 1fr;
-  gap: 1rem;
+  /* grid-template-columns 由 JS 动态注入，默认三列：sidebar + handle + main */
+  gap: 0;
   align-items: start;
   flex: 1;
   min-width: 0;
   overflow: hidden;
+}
+
+/* 拖拽调宽把手 */
+.resize-handle {
+  width: 4px;
+  align-self: stretch;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s;
+  position: relative;
+  z-index: 10;
+}
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+}
+.resize-handle:hover,
+.resize-handle:active {
+  background: var(--accent-300, #93c5fd);
 }
 
 /* 防溢出的侧边栏 */
@@ -1122,357 +1318,176 @@ const handleBatchAction = (command: string) => {
 }
 
 /* 全部文档项 */
-.category-all-item {
+/* ── 自定义分类列表 ── */
+.cat-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.25rem;
-  border-radius: var(--radius-lg);
+  gap: 4px;
+  padding: 6px 8px 6px 6px;
+  margin-bottom: 1px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.2s ease;
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 32px;
+  position: relative;
 }
 
-.category-all-item:hover {
+.cat-item:hover {
   background: var(--bg-secondary);
-  border-color: var(--border-light);
 }
 
-.category-all-item.is-active {
+.cat-item.is-active {
   background: var(--accent-50);
   border-color: var(--accent-200);
 }
 
-.category-all-item.is-active .category-name {
+.cat-item.is-active .cat-name {
   color: var(--accent-700);
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.category-all-item.is-active .category-count {
+.cat-item.is-active .cat-count {
   background: var(--accent-600);
   color: white;
-  border-color: var(--accent-700);
+  border-color: transparent;
 }
 
-.category-all-item .category-name {
+/* 箭头 */
+.cat-arrow {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: transform 0.2s ease;
+  color: var(--neutral-400);
+}
+
+.cat-arrow svg {
+  width: 12px;
+  height: 12px;
+}
+
+.cat-arrow:hover {
+  color: var(--accent-600);
+  background: var(--accent-50);
+}
+
+.cat-arrow.is-expanded {
+  transform: rotate(90deg);
+}
+
+.cat-arrow-placeholder {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+/* 名称 */
+.cat-name {
   flex: 1;
-  font-size: 0.875rem;
-  color: var(--neutral-700);
-  font-weight: 600;
   min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--neutral-700);
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* 数量徽章 */
+.cat-count {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--neutral-500);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 0 6px;
+  height: 18px;
+  line-height: 18px;
+  min-width: 22px;
+  text-align: center;
+}
+
+/* 管理操作 — 悬停时显示，绝对定位覆盖右侧 */
+.cat-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.cat-item:hover .cat-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cat-actions .el-button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 4px;
+  color: var(--neutral-400);
+}
+
+.cat-actions .el-button:hover {
+  color: var(--accent-600);
+  background: var(--accent-50);
+}
+
+/* 移动按钮特殊颜色 */
+.cat-actions .el-button:nth-child(2):hover {
+  color: var(--accent-500);
+  background: var(--accent-50);
+}
+
+.cat-actions .el-button:last-child:hover {
+  color: var(--error, #f56c6c);
+  background: #fff0f0;
+}
+
+/* 移动分类对话框 */
+.move-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.move-source,
+.move-target {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.move-label {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--neutral-600);
+  width: 70px;
+}
+
+.move-tip {
+  font-size: 12px;
+  color: var(--neutral-500);
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 0;
+  line-height: 1.6;
 }
 
 /* 筛选状态标注 */
 .stat-filtered {
   color: var(--accent-600);
   font-weight: 600;
-}
-
-.category-tree {
-  background: transparent !important;
-  padding-top: 0.25rem;
-}
-
-.category-tree :deep(.el-tree-node__content) {
-  height: auto;
-  padding: 0;
-  background: transparent !important;
-  border-radius: var(--radius-lg);
-  margin-bottom: 0.125rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: visible !important;
-}
-
-.category-tree :deep(.el-tree-node__children) {
-  padding-left: 0.75rem !important;
-}
-
-.category-tree :deep(.el-tree-node__expand-icon) {
-  margin-right: 0.5rem !important;
-  color: var(--neutral-500) !important;
-}
-
-.category-tree :deep(.el-tree-node__content:hover) {
-  background: var(--bg-secondary) !important;
-}
-
-.category-tree :deep(.el-tree-node.is-current > .el-tree-node__content) {
-  background: var(--accent-50) !important;
-  border: 1px solid var(--accent-200);
-}
-
-.category-tree :deep(.el-tree-node__expand-icon) {
-  color: var(--neutral-400);
-  font-size: 0.875rem;
-  transition: all 0.3s ease;
-  margin-right: 0.5rem;
-}
-
-.category-tree :deep(.el-tree-node__expand-icon.expanded) {
-  color: var(--accent-600);
-  transform: rotate(90deg);
-}
-
-.category-tree :deep(.el-tree-node__expand-icon:hover) {
-  color: var(--accent-700);
-  transform: scale(1.2);
-}
-
-.category-node {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-width: 0; /* 允许子元素收缩 */
-  padding: 0.5rem 0.5rem;
-  border-radius: var(--radius-lg);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  min-height: 36px;
-  position: relative;
-  background: transparent;
-  border: 1px solid transparent;
-}
-
-.category-content {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0; /* 允许收缩 */
-  margin-right: 0.5rem;
-}
-
-.category-node::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 0;
-  background: var(--accent-600);
-  border-radius: 0 2px 2px 0;
-  transition: height 0.2s ease;
-}
-
-.category-node:hover::before {
-  height: 60%;
-}
-
-.category-node:hover {
-  background: var(--bg-secondary);
-  border-color: var(--border-light);
-}
-
-.category-name {
-  flex: 1;
-  font-size: 0.875rem;
-  color: var(--neutral-700);
-  font-weight: 600;
-  line-height: 1.4;
-  margin-right: 0.75rem;
-  transition: all 0.3s ease;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: -0.025em;
-  position: relative;
-}
-
-.category-node:hover .category-name {
-  color: var(--neutral-800);
-}
-
-.category-tree :deep(.el-tree-node.is-current) .category-name {
-  color: var(--accent-700);
-  font-weight: 700;
-}
-
-.category-count {
-  font-size: 0.7rem;
-  color: var(--accent-600);
-  background: var(--accent-50);
-  padding: 0.2rem 0.45rem;
-  border-radius: var(--radius-full);
-  min-width: 1.8rem;
-  text-align: center;
-  margin-right: 0.4rem;
-  font-weight: 600;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 20px;
-  border: 1px solid var(--accent-200);
-  flex-shrink: 0;
-}
-
-.category-node:hover .category-count {
-  background: var(--accent-100);
-}
-
-.category-tree :deep(.el-tree-node.is-current) .category-count {
-  background: var(--accent-600);
-  color: white;
-  border-color: var(--accent-700);
-}
-
-.category-actions {
-  display: flex;
-  gap: 0.125rem;
-  align-items: center;
-  opacity: 0;
-  transform: translateX(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-  flex-shrink: 0;
-  min-width: 56px;
-}
-
-.category-node:hover .category-actions {
-  opacity: 1;
-  transform: translateX(0);
-  pointer-events: auto;
-}
-
-.category-actions .el-button {
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-  background: var(--bg-tertiary);
-  color: var(--neutral-500);
-}
-
-.category-actions .el-button:hover {
-  background: var(--accent-50);
-  border-color: var(--accent-200);
-  color: var(--accent-600);
-}
-
-.category-actions .el-button:nth-child(2):hover {
-  background: var(--error-light);
-  color: var(--error);
-}
-
-.category-actions .el-button .el-icon {
-  font-size: 0.875rem;
-}
-
-/* 特殊样式确保操作按钮完整显示 */
-.category-tree :deep(.el-tree-node__content:hover) {
-  z-index: 10 !important;
-  position: relative !important;
-}
-
-.category-tree :deep(.el-tree-node__content) {
-  position: relative !important;
-}
-
-/* 分类树空状态 */
-.category-tree-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-  text-align: center;
-  color: var(--neutral-500);
-}
-
-.category-tree-empty .empty-icon {
-  width: 3rem;
-  height: 3rem;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-  opacity: 0.6;
-}
-
-.category-tree-empty .empty-icon svg {
-  width: 1.5rem;
-  height: 1.5rem;
-  color: var(--neutral-400);
-}
-
-.category-tree-empty .empty-text {
-  font-size: 0.875rem;
-  color: var(--neutral-500);
-  margin-bottom: 0.5rem;
-}
-
-.category-tree-empty .empty-hint {
-  font-size: 0.75rem;
-  color: var(--neutral-400);
-}
-
-/* 分类树加载状态 */
-.category-tree-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-}
-
-.category-loading-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.category-loading-item:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.category-loading-item:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-.loading-icon {
-  width: 1rem;
-  height: 1rem;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-}
-
-.loading-text {
-  flex: 1;
-  height: 0.875rem;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-}
-
-.loading-count {
-  width: 2rem;
-  height: 1.5rem;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
 }
 
 /* 防溢出的主内容区域 */
@@ -2411,7 +2426,6 @@ const handleBatchAction = (command: string) => {
   }
 
   .main-layout {
-    grid-template-columns: minmax(180px, 220px) 1fr;
     gap: 0.75rem;
   }
 
@@ -2437,9 +2451,13 @@ const handleBatchAction = (command: string) => {
   }
 
   .main-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 1rem;
     overflow: hidden;
+  }
+
+  .resize-handle {
+    display: none;
   }
 
   .sidebar {
