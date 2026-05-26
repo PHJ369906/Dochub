@@ -11,9 +11,19 @@ impl CategoryService {
         let conn = db.conn.lock().map_err(|e| AppError::Internal(e.to_string()))?;
 
         let mut stmt = conn.prepare(
-            "SELECT c.id, c.name, c.description, c.parent_id, c.sort_order, c.is_enabled,
+            "WITH RECURSIVE descendants(root_id, descendant_id) AS (\
+                SELECT id, id FROM file_category WHERE is_enabled = 1 \
+                UNION ALL \
+                SELECT d.root_id, c.id FROM file_category c \
+                JOIN descendants d ON c.parent_id = d.descendant_id \
+                WHERE c.is_enabled = 1\
+             ) \
+             SELECT c.id, c.name, c.description, c.parent_id, c.sort_order, c.is_enabled,
                     c.create_time, c.update_time, c.created_by,
-                    (SELECT COUNT(*) FROM policy_file f WHERE f.category_id = c.id AND f.is_enabled = 1) as file_count
+                    (SELECT COUNT(*) FROM policy_file f
+                     WHERE f.is_enabled = 1
+                       AND f.category_id IN (SELECT descendant_id FROM descendants WHERE root_id = c.id)
+                    ) as file_count
              FROM file_category c
              WHERE c.is_enabled = 1
              ORDER BY c.sort_order ASC, c.id ASC"
@@ -42,9 +52,19 @@ impl CategoryService {
         let conn = db.conn.lock().map_err(|e| AppError::Internal(e.to_string()))?;
 
         let mut stmt = conn.prepare(
-            "SELECT c.id, c.name, c.description, c.parent_id, c.sort_order, c.is_enabled,
+            "WITH RECURSIVE descendants(root_id, descendant_id) AS (\
+                SELECT id, id FROM file_category WHERE is_enabled = 1 \
+                UNION ALL \
+                SELECT d.root_id, c.id FROM file_category c \
+                JOIN descendants d ON c.parent_id = d.descendant_id \
+                WHERE c.is_enabled = 1\
+             ) \
+             SELECT c.id, c.name, c.description, c.parent_id, c.sort_order, c.is_enabled,
                     c.create_time, c.update_time, c.created_by,
-                    (SELECT COUNT(*) FROM policy_file f WHERE f.category_id = c.id AND f.is_enabled = 1) as file_count
+                    (SELECT COUNT(*) FROM policy_file f
+                     WHERE f.is_enabled = 1
+                       AND f.category_id IN (SELECT descendant_id FROM descendants WHERE root_id = c.id)
+                    ) as file_count
              FROM file_category c
              WHERE c.parent_id IS NULL AND c.is_enabled = 1
              ORDER BY c.sort_order ASC"
@@ -73,9 +93,19 @@ impl CategoryService {
         let conn = db.conn.lock().map_err(|e| AppError::Internal(e.to_string()))?;
 
         let mut stmt = conn.prepare(
-            "SELECT c.id, c.name, c.description, c.parent_id, c.sort_order, c.is_enabled,
+            "WITH RECURSIVE descendants(root_id, descendant_id) AS (\
+                SELECT id, id FROM file_category WHERE is_enabled = 1 \
+                UNION ALL \
+                SELECT d.root_id, c.id FROM file_category c \
+                JOIN descendants d ON c.parent_id = d.descendant_id \
+                WHERE c.is_enabled = 1\
+             ) \
+             SELECT c.id, c.name, c.description, c.parent_id, c.sort_order, c.is_enabled,
                     c.create_time, c.update_time, c.created_by,
-                    (SELECT COUNT(*) FROM policy_file f WHERE f.category_id = c.id AND f.is_enabled = 1) as file_count
+                    (SELECT COUNT(*) FROM policy_file f
+                     WHERE f.is_enabled = 1
+                       AND f.category_id IN (SELECT descendant_id FROM descendants WHERE root_id = c.id)
+                    ) as file_count
              FROM file_category c
              WHERE c.parent_id = ?1 AND c.is_enabled = 1
              ORDER BY c.sort_order ASC"
@@ -225,9 +255,18 @@ impl CategoryService {
         let conn = db.conn.lock().map_err(|e| AppError::Internal(e.to_string()))?;
 
         conn.query_row(
-            "SELECT c.id, c.name,
-                    (SELECT COUNT(*) FROM policy_file f WHERE f.category_id = c.id AND f.is_enabled = 1),
-                    (SELECT COALESCE(SUM(f.file_size), 0) FROM policy_file f WHERE f.category_id = c.id AND f.is_enabled = 1)
+            "WITH RECURSIVE cat_tree(id) AS (\
+                SELECT ?1 \
+                UNION ALL \
+                SELECT c.id FROM file_category c \
+                JOIN cat_tree t ON c.parent_id = t.id \
+                WHERE c.is_enabled = 1\
+             ) \
+             SELECT c.id, c.name,
+                    (SELECT COUNT(*) FROM policy_file f
+                     WHERE f.is_enabled = 1 AND f.category_id IN (SELECT id FROM cat_tree)),
+                    (SELECT COALESCE(SUM(f.file_size), 0) FROM policy_file f
+                     WHERE f.is_enabled = 1 AND f.category_id IN (SELECT id FROM cat_tree))
              FROM file_category c WHERE c.id = ?1",
             params![id],
             |row| {

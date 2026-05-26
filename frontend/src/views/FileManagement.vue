@@ -494,6 +494,7 @@ const categoryOptions = ref<FileCategory[]>([])
 const availableTags = ref([])
 const selectedFiles = ref<PolicyFile[]>([])
 const currentPreviewFile = ref<PolicyFile | null>(null)
+const currentEditFile = ref<PolicyFile | null>(null)
 const totalFileCount = ref(0)
 const expandedIds = ref<Set<number>>(new Set()) // 已展开的分类 id
 

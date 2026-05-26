@@ -136,6 +136,7 @@ pub fn update_file(
     token: String,
     id: i64,
     title: Option<String>,
+    original_name: Option<String>,
     description: Option<String>,
     category_id: Option<i64>,
     tags: Option<Vec<String>>,
@@ -149,6 +150,7 @@ pub fn update_file(
 
     let req = UpdateFileRequest {
         title,
+        original_name,
         description,
         category_id,
         tags,

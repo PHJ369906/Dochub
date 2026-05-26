@@ -153,6 +153,7 @@ pub struct UploadFileRequest {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateFileRequest {
     pub title: Option<String>,
+    pub original_name: Option<String>,
     pub description: Option<String>,
     pub category_id: Option<i64>,
     pub tags: Option<Vec<String>>,

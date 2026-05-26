@@ -104,7 +104,19 @@ impl FileService {
 
         if let Some(category_id) = params.category_id {
             bind_values.push(Box::new(category_id));
-            conditions.push(format!("f.category_id = ?{}", bind_values.len()));
+            let idx = bind_values.len();
+            conditions.push(format!(
+                "f.category_id IN (\
+                    WITH RECURSIVE cat_tree(id) AS (\
+                        SELECT ?{idx} \
+                        UNION ALL \
+                        SELECT c.id FROM file_category c \
+                        JOIN cat_tree t ON c.parent_id = t.id \
+                        WHERE c.is_enabled = 1\
+                    ) SELECT id FROM cat_tree\
+                )",
+                idx = idx
+            ));
         }
 
         if let Some(ref authority) = params.issuing_authority {
@@ -319,6 +331,10 @@ impl FileService {
         if let Some(ref title) = req.title {
             bind_values.push(Box::new(title.clone()));
             updates.push(format!("title = ?{}", bind_values.len()));
+        }
+        if let Some(ref original_name) = req.original_name {
+            bind_values.push(Box::new(original_name.clone()));
+            updates.push(format!("original_name = ?{}", bind_values.len()));
         }
         if let Some(ref desc) = req.description {
             bind_values.push(Box::new(desc.clone()));

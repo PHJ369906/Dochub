@@ -23,6 +23,15 @@
         />
       </el-form-item>
 
+      <el-form-item label="原始文件名" prop="originalName">
+        <el-input
+          v-model="fileForm.originalName"
+          placeholder="请输入原始文件名（含扩展名）"
+          clearable
+          maxlength="200"
+        />
+      </el-form-item>
+
       <el-form-item label="文档分类" prop="categoryId">
         <el-cascader
           v-model="fileForm.categoryId"
@@ -122,6 +131,7 @@ const saving = ref(false)
 
 const fileForm = reactive({
   title: '',
+  originalName: '',
   categoryId: undefined as number | undefined,
   issuingAuthority: '',
   description: '',
@@ -133,6 +143,10 @@ const fileRules: FormRules = {
   title: [
     { required: true, message: '请输入文档标题', trigger: 'blur' },
     { min: 1, max: 100, message: '标题长度在1-100个字符', trigger: 'blur' }
+  ],
+  originalName: [
+    { required: true, message: '请输入原始文件名', trigger: 'blur' },
+    { min: 1, max: 200, message: '文件名长度在1-200个字符', trigger: 'blur' }
   ]
 }
 
@@ -192,6 +206,7 @@ const handleSave = async () => {
       try {
         const updateData = {
           title: fileForm.title,
+          originalName: fileForm.originalName,
           categoryId: fileForm.categoryId,
           issuingAuthority: fileForm.issuingAuthority || undefined,
           description: fileForm.description || undefined,
@@ -226,6 +241,7 @@ const handleClose = () => {
 const resetForm = () => {
   Object.assign(fileForm, {
     title: '',
+    originalName: '',
     categoryId: undefined,
     issuingAuthority: '',
     description: '',
@@ -241,6 +257,7 @@ watch(() => props.editFile, (newFile) => {
     nextTick(() => {
       Object.assign(fileForm, {
         title: newFile.title || '',
+        originalName: newFile.originalName || '',
         categoryId: newFile.categoryId || undefined,
         issuingAuthority: newFile.issuingAuthority || '',
         description: newFile.description || '',
@@ -259,6 +276,7 @@ watch(() => props.modelValue, (visible) => {
     nextTick(() => {
       Object.assign(fileForm, {
         title: props.editFile!.title || '',
+        originalName: props.editFile!.originalName || '',
         categoryId: props.editFile!.categoryId || undefined,
         issuingAuthority: props.editFile!.issuingAuthority || '',
         description: props.editFile!.description || '',

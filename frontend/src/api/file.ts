@@ -62,6 +62,7 @@ export const updateFile = (id: number, data: any) => {
   return tauriInvoke('update_file', {
     id,
     title: data.title || null,
+    originalName: data.originalName || null,
     description: data.description || null,
     categoryId: data.categoryId || null,
     tags: data.tags && data.tags.length > 0 ? data.tags : null,
