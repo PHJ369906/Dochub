@@ -532,6 +532,7 @@ watch(categoryTree, (tree) => {
 // 对话框显示状态
 const showUploadDialog = ref(false)
 const showCategoryDialog = ref(false)
+const currentEditCategory = ref<FileCategory | null>(null)
 const showPreviewDialog = ref(false)
 const showAdvancedSearch = ref(false)
 const showFileEditDialog = ref(false)
@@ -685,18 +686,6 @@ const buildCategoryTree = (categories: FileCategory[]): FileCategory[] => {
     }
   })
 
-  // 递归累加子分类文件数到父分类的 totalCount
-  const calcTotalCount = (nodes: FileCategory[]): number => {
-    return nodes.reduce((sum, node) => {
-      const childCount = node.children && node.children.length > 0
-        ? calcTotalCount(node.children)
-        : 0
-      node.totalCount = (node.fileCount || 0) + childCount
-      return sum + node.totalCount
-    }, 0)
-  }
-  calcTotalCount(result)
-
   return result
 }
 
@@ -719,7 +708,8 @@ const loadFileList = async () => {
   try {
     const params = {
       ...searchForm,
-      page: pagination.page - 1 // 后端从0开始
+      page: pagination.page - 1, // 后端从0开始
+      size: pagination.size
     }
     const response = await getFileList(params)
     if (response.code === 200) {
@@ -1279,6 +1269,7 @@ const handleBatchAction = (command: string) => {
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 1rem;
   position: relative;
 }
@@ -1286,6 +1277,7 @@ const handleBatchAction = (command: string) => {
 /* 美化分类面板滚动条 */
 .sidebar-content::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 
 .sidebar-content::-webkit-scrollbar-track {
@@ -1332,6 +1324,7 @@ const handleBatchAction = (command: string) => {
   transition: background 0.15s, border-color 0.15s;
   min-height: 32px;
   position: relative;
+  min-width: max-content;
 }
 
 .cat-item:hover {
@@ -1388,13 +1381,10 @@ const handleBatchAction = (command: string) => {
 
 /* 名称 */
 .cat-name {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 auto;
   font-size: 0.8125rem;
   color: var(--neutral-700);
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.4;
 }
@@ -1402,6 +1392,7 @@ const handleBatchAction = (command: string) => {
 /* 数量徽章 */
 .cat-count {
   flex-shrink: 0;
+  margin-left: auto;
   font-size: 0.6875rem;
   font-weight: 600;
   color: var(--neutral-500);
